@@ -1,15 +1,9 @@
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.geom.Ellipse2D;
 import java.util.*;
 import java.util.List;
-import java.io.File;
-import java.io.FileInputStream;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 public class SimulacionTortilleria extends JFrame {
     
@@ -293,7 +287,6 @@ public class SimulacionTortilleria extends JFrame {
             
             // Simular datos reales (ajusta estos valores según tus datos)
             // Estos son datos acumulados cada 30 minutos
-            double horaInicio = 12.0; // 12:00
             for (int i = 0; i <= 8; i++) { // 0, 0.5, 1, ..., 4 horas
                 double hora = i * 0.5;
                 int clientes = (int)DATOS_REALES_EJEMPLO[i];
@@ -971,17 +964,22 @@ public class SimulacionTortilleria extends JFrame {
     }
     
     private String formatearHoras(List<Double> horas) {
-        if (horas.isEmpty()) return "Ninguno identificado";
-        
-        StringBuilder sb = new StringBuilder();
-        for (Double hora : horas) {
-            int horasEnteras = (int)hora;
-            int minutos = (int)((hora - horasEnteras) * 60);
-            sb.append(String.format("%d:%02d, ", 12 + horasEnteras, minutos));
-        }
-        
-        return sb.substring(0, sb.length() - 2);
+    if (horas.isEmpty()) return "Ninguno identificado";
+
+    StringBuilder sb = new StringBuilder();
+    for (Double hora : horas) {
+        int horasEnteras = hora.intValue(); // Forma correcta de convertir Double a int
+        int minutos = (int)((hora - horasEnteras) * 60);
+        sb.append(String.format("%d:%02d, ", 12 + horasEnteras, minutos));
     }
+
+    // Eliminar la última coma y espacio
+    if (sb.length() > 0) {
+        sb.setLength(sb.length() - 2);
+    }
+
+    return sb.toString();
+}
     
     private void aplicarTemaOscuro() {
         Color fondoPrincipal = new Color(45, 45, 48);
@@ -1005,8 +1003,8 @@ public class SimulacionTortilleria extends JFrame {
         UIManager.put("TitledBorder.border", BorderFactory.createLineBorder(borde));
     }
     
-    // Clase interna para datos de puntos
-    private class PuntoDato {
+    // Clase interna estática para datos de puntos
+    private static class PuntoDato {
         double hora;
         int clientes;
         
