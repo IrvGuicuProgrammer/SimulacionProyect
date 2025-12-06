@@ -1,573 +1,399 @@
 import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.ItemEvent;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class TransformadasInversas extends JFrame {
-    
-    private final Color COLOR_FONDO = new Color(18, 18, 20);
-    private final Color COLOR_CARD = new Color(30, 30, 32);
-    private final Color COLOR_PRIMARIO = new Color(0, 120, 215);
-    private final Color COLOR_EXITO = new Color(87, 166, 74);
-    private final Color COLOR_TEXTO = new Color(240, 240, 240);
-    private final Color COLOR_TEXTO_SECUNDARIO = new Color(180, 180, 180);
-    
-    private JComboBox<String> comboDistribucion;
+
+    // --- Paleta de Colores ---
+    private final Color COLOR_FONDO = new Color(15, 15, 20);
+    private final Color COLOR_CARD = new Color(30, 30, 40);
+    private final Color COLOR_PRIMARIO = new Color(99, 102, 241); // Indigo
+    private final Color COLOR_TEXTO = new Color(240, 240, 245);
+    private final Color COLOR_TEXTO_SECUNDARIO = new Color(160, 165, 180);
+    private final Color COLOR_BORDE = new Color(50, 55, 65);
+    private final Color COLOR_HOVER = new Color(40, 45, 55);
+    private final Color COLOR_GRAFICA_BARRA = new Color(16, 185, 129); // Verde
+
+    // Componentes
+    private JComboBox<String> cbConjuntoRi;
+    private JComboBox<String> cbDistribucion;
+    private JLabel lblCantidadDatos; // Nuevo Label informativo
     private JTextField txtParam1, txtParam2, txtParam3;
+    private JLabel lblParam1, lblParam2, lblParam3;
+    private JPanel panelInputsDinamicos;
     private JTable tablaResultados;
     private DefaultTableModel modeloTabla;
-    private JLabel lblInfoDistribucion;
-    private JLabel lblParam1, lblParam2, lblParam3;
+    private PanelGraficaHistograma panelGrafica;
     
+    // Datos
+    private List<Double> datosSimulados;
+    private List<Double> datosRiUtilizados;
+
     public TransformadasInversas() {
-        setTitle("TRANSFORMADAS INVERSAS");
+        setTitle("Transformadas Inversas - Generación de Variables Aleatorias");
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        setSize(1100, 700);
+        setSize(1400, 850);
         setLocationRelativeTo(null);
+        setLayout(new BorderLayout());
         getContentPane().setBackground(COLOR_FONDO);
-        
-        // Panel principal
-        JPanel panelPrincipal = new JPanel(new BorderLayout(0, 0));
-        panelPrincipal.setBackground(COLOR_FONDO);
-        
-        // Barra superior
-        panelPrincipal.add(crearBarraSuperior(), BorderLayout.NORTH);
-        
-        // Panel central dividido
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
-            crearPanelConfiguracion(), crearPanelResultados());
-        splitPane.setDividerLocation(400);
-        splitPane.setBackground(COLOR_FONDO);
-        splitPane.setBorder(null);
-        
-        panelPrincipal.add(splitPane, BorderLayout.CENTER);
-        
-        add(panelPrincipal);
-    }
-    
-    private JPanel crearBarraSuperior() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(COLOR_CARD);
-        panel.setBorder(BorderFactory.createEmptyBorder(15, 25, 15, 25));
-        
-        // Título
-        JLabel titulo = new JLabel("TRANSFORMADAS INVERSAS");
-        titulo.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        titulo.setForeground(COLOR_TEXTO);
-        
-        // Botón regresar
-        JButton btnRegresar = crearBotonIcono("←", COLOR_TEXTO_SECUNDARIO);
-        btnRegresar.addActionListener(e -> {
-            new MenuPrincipal().setVisible(true);
-            this.dispose();
-        });
-        
-        panel.add(btnRegresar, BorderLayout.WEST);
-        panel.add(titulo, BorderLayout.CENTER);
-        
-        return panel;
-    }
-    
-    private JPanel crearPanelConfiguracion() {
-        JPanel panel = new JPanel(new BorderLayout(20, 20));
-        panel.setBackground(COLOR_FONDO);
-        panel.setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
-        
-        // Tarjeta de configuración
-        JPanel tarjeta = new JPanel(new BorderLayout(20, 20));
-        tarjeta.setBackground(COLOR_CARD);
-        tarjeta.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(60, 60, 60)),
-            BorderFactory.createEmptyBorder(25, 25, 25, 25)
-        ));
-        
-        // Título
-        JLabel lblTitulo = new JLabel("CONFIGURACIÓN");
-        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        lblTitulo.setForeground(COLOR_PRIMARIO);
-        lblTitulo.setBorder(BorderFactory.createEmptyBorder(0, 0, 15, 0));
-        
-        // Panel de selección
-        JPanel panelSeleccion = new JPanel(new BorderLayout(10, 10));
-        panelSeleccion.setBackground(COLOR_CARD);
-        
-        JLabel lblDist = new JLabel("Distribución:");
-        lblDist.setForeground(COLOR_TEXTO);
-        lblDist.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        
-        comboDistribucion = new JComboBox<>(new String[]{
-            "Uniforme Continua", "Exponencial", "Normal", "Triangular", "Bernoulli", "Binomial"
-        });
-        estilizarComboBox(comboDistribucion);
-        comboDistribucion.addActionListener(e -> actualizarCamposParametros());
-        
-        panelSeleccion.add(lblDist, BorderLayout.WEST);
-        panelSeleccion.add(comboDistribucion, BorderLayout.CENTER);
-        
-        // Panel de parámetros
-        JPanel panelParametros = new JPanel(new GridLayout(3, 2, 10, 15));
-        panelParametros.setBackground(COLOR_CARD);
-        panelParametros.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
-        
-        // Crear etiquetas y campos
-        lblParam1 = new JLabel();
-        txtParam1 = crearCampoTexto();
-        
-        lblParam2 = new JLabel();
-        txtParam2 = crearCampoTexto();
-        
-        lblParam3 = new JLabel();
-        txtParam3 = crearCampoTexto();
-        
-        panelParametros.add(lblParam1);
-        panelParametros.add(txtParam1);
-        panelParametros.add(lblParam2);
-        panelParametros.add(txtParam2);
-        panelParametros.add(lblParam3);
-        panelParametros.add(txtParam3);
-        
-        // Panel de información
-        JPanel panelInfo = new JPanel(new BorderLayout());
-        panelInfo.setBackground(new Color(40, 40, 45));
-        panelInfo.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(60, 60, 60)),
-            BorderFactory.createEmptyBorder(15, 15, 15, 15)
-        ));
-        
-        lblInfoDistribucion = new JLabel("<html><div style='text-align: center;'>" +
-            "Seleccione una distribución para ver información detallada</div></html>");
-        lblInfoDistribucion.setForeground(COLOR_TEXTO_SECUNDARIO);
-        lblInfoDistribucion.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        
-        panelInfo.add(lblInfoDistribucion, BorderLayout.CENTER);
-        
-        // Panel de botones
-        JPanel panelBotones = new JPanel(new GridLayout(2, 1, 10, 10));
-        panelBotones.setBackground(COLOR_CARD);
-        
-        JButton btnGenerar = crearBotonModerno("GENERAR TRANSFORMADAS", COLOR_PRIMARIO);
-        btnGenerar.addActionListener(e -> generarTransformadas());
-        
-        JButton btnUsarNumeros = crearBotonModerno("USAR NÚMEROS GENERADOS", COLOR_EXITO);
-        btnUsarNumeros.addActionListener(e -> usarNumerosGenerados());
-        
-        panelBotones.add(btnGenerar);
-        panelBotones.add(btnUsarNumeros);
-        
-        tarjeta.add(lblTitulo, BorderLayout.NORTH);
-        tarjeta.add(panelSeleccion, BorderLayout.NORTH);
-        tarjeta.add(panelParametros, BorderLayout.CENTER);
-        tarjeta.add(panelInfo, BorderLayout.SOUTH);
-        tarjeta.add(panelBotones, BorderLayout.SOUTH);
-        
-        panel.add(tarjeta, BorderLayout.CENTER);
-        
-        // Inicializar campos
-        actualizarCamposParametros();
-        
-        return panel;
-    }
-    
-    private JPanel crearPanelResultados() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(COLOR_FONDO);
-        panel.setBorder(BorderFactory.createEmptyBorder(25, 0, 25, 25));
-        
-        // Tarjeta de resultados
-        JPanel tarjeta = new JPanel(new BorderLayout());
-        tarjeta.setBackground(COLOR_CARD);
-        tarjeta.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(60, 60, 60)),
-            BorderFactory.createEmptyBorder(0, 0, 0, 0)
-        ));
-        
-        // Título
-        JLabel lblTitulo = new JLabel("RESULTADOS");
-        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        lblTitulo.setForeground(COLOR_PRIMARIO);
-        lblTitulo.setBorder(BorderFactory.createEmptyBorder(20, 20, 15, 20));
-        lblTitulo.setHorizontalAlignment(SwingConstants.LEFT);
-        
-        // Tabla de resultados
-        modeloTabla = new DefaultTableModel(new Object[]{"#", "U", "X = F⁻¹(U)", "Distribución"}, 0);
-        tablaResultados = new JTable(modeloTabla);
-        estilizarTabla(tablaResultados);
-        
-        JScrollPane scrollTabla = new JScrollPane(tablaResultados);
-        scrollTabla.getViewport().setBackground(COLOR_CARD);
-        scrollTabla.setBorder(null);
-        
-        // Panel de estadísticas
-        JPanel panelEstadisticas = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        panelEstadisticas.setBackground(new Color(40, 40, 45));
-        panelEstadisticas.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
-        
-        JLabel lblStats = new JLabel("Total de transformaciones: 0");
-        lblStats.setForeground(COLOR_TEXTO_SECUNDARIO);
-        lblStats.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        
-        panelEstadisticas.add(lblStats);
-        
-        tarjeta.add(lblTitulo, BorderLayout.NORTH);
-        tarjeta.add(scrollTabla, BorderLayout.CENTER);
-        tarjeta.add(panelEstadisticas, BorderLayout.SOUTH);
-        
-        panel.add(tarjeta, BorderLayout.CENTER);
-        
-        return panel;
-    }
-    
-    private JTextField crearCampoTexto() {
-        JTextField campo = new JTextField();
-        campo.setBackground(new Color(45, 45, 48));
-        campo.setForeground(COLOR_TEXTO);
-        campo.setCaretColor(COLOR_TEXTO);
-        campo.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(60, 60, 60), 1),
-            BorderFactory.createEmptyBorder(10, 15, 10, 15)
-        ));
-        campo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        return campo;
-    }
-    
-    private void actualizarCamposParametros() {
-        String distribucion = (String) comboDistribucion.getSelectedItem();
-        
-        // Ocultar todos los campos primero
-        lblParam1.setVisible(false);
-        txtParam1.setVisible(false);
-        lblParam2.setVisible(false);
-        txtParam2.setVisible(false);
-        lblParam3.setVisible(false);
-        txtParam3.setVisible(false);
-        
-        switch(distribucion) {
-            case "Uniforme Continua":
-                lblParam1.setText("Mínimo (a):");
-                txtParam1.setText("0.0");
-                lblParam1.setVisible(true);
-                txtParam1.setVisible(true);
-                
-                lblParam2.setText("Máximo (b):");
-                txtParam2.setText("1.0");
-                lblParam2.setVisible(true);
-                txtParam2.setVisible(true);
-                
-                lblInfoDistribucion.setText("<html><div style='text-align: center;'>" +
-                    "<b>Distribución Uniforme Continua U(a,b)</b><br>" +
-                    "Fórmula: X = a + (b-a)*U<br>" +
-                    "U ~ Uniforme(0,1)</div></html>");
-                break;
-                
-            case "Exponencial":
-                lblParam1.setText("Tasa (λ):");
-                txtParam1.setText("1.0");
-                lblParam1.setVisible(true);
-                txtParam1.setVisible(true);
-                
-                lblInfoDistribucion.setText("<html><div style='text-align: center;'>" +
-                    "<b>Distribución Exponencial</b><br>" +
-                    "Fórmula: X = -ln(1-U)/λ<br>" +
-                    "λ > 0 (parámetro de tasa)</div></html>");
-                break;
-                
-            case "Normal":
-                lblParam1.setText("Media (μ):");
-                txtParam1.setText("0.0");
-                lblParam1.setVisible(true);
-                txtParam1.setVisible(true);
-                
-                lblParam2.setText("Desviación (σ):");
-                txtParam2.setText("1.0");
-                lblParam2.setVisible(true);
-                txtParam2.setVisible(true);
-                
-                lblInfoDistribucion.setText("<html><div style='text-align: center;'>" +
-                    "<b>Distribución Normal N(μ,σ²)</b><br>" +
-                    "Método: Box-Muller<br>" +
-                    "X = μ + σ * √(-2·ln(U₁))·cos(2π·U₂)</div></html>");
-                break;
-                
-            case "Triangular":
-                lblParam1.setText("Mínimo (a):");
-                txtParam1.setText("0.0");
-                lblParam1.setVisible(true);
-                txtParam1.setVisible(true);
-                
-                lblParam2.setText("Máximo (b):");
-                txtParam2.setText("1.0");
-                lblParam2.setVisible(true);
-                txtParam2.setVisible(true);
-                
-                lblParam3.setText("Moda (c):");
-                txtParam3.setText("0.5");
-                lblParam3.setVisible(true);
-                txtParam3.setVisible(true);
-                
-                lblInfoDistribucion.setText("<html><div style='text-align: center;'>" +
-                    "<b>Distribución Triangular T(a,b,c)</b><br>" +
-                    "Moda c se calcula automáticamente</div></html>");
-                break;
-                
-            case "Bernoulli":
-                lblParam1.setText("Probabilidad (p):");
-                txtParam1.setText("0.5");
-                lblParam1.setVisible(true);
-                txtParam1.setVisible(true);
-                
-                lblInfoDistribucion.setText("<html><div style='text-align: center;'>" +
-                    "<b>Distribución Bernoulli(p)</b><br>" +
-                    "X = 1 si U ≤ p, 0 si U > p<br>" +
-                    "Probabilidad de éxito: p</div></html>");
-                break;
-                
-            case "Binomial":
-                lblParam1.setText("Ensayo (n):");
-                txtParam1.setText("10");
-                lblParam1.setVisible(true);
-                txtParam1.setVisible(true);
-                
-                lblParam2.setText("Probabilidad (p):");
-                txtParam2.setText("0.5");
-                lblParam2.setVisible(true);
-                txtParam2.setVisible(true);
-                
-                lblInfoDistribucion.setText("<html><div style='text-align: center;'>" +
-                    "<b>Distribución Binomial(n,p)</b><br>" +
-                    "Suma de n ensayos Bernoulli<br>" +
-                    "Número de éxitos en n intentos</div></html>");
-                break;
+
+        // Validar datos previos
+        if (!SimulacionDatos.getInstancia().hayDatos()) {
+            JOptionPane.showMessageDialog(this, 
+                "¡No hay datos generados!\nPor favor ve al módulo anterior primero.", 
+                "Sin Datos", JOptionPane.WARNING_MESSAGE);
         }
+
+        datosSimulados = new ArrayList<>();
+        datosRiUtilizados = new ArrayList<>();
+
+        add(crearPanelSuperior(), BorderLayout.NORTH);
+        add(crearPanelCentral(), BorderLayout.CENTER);
+        add(crearPanelInferior(), BorderLayout.SOUTH);
+        
+        actualizarCamposInputs();
+        actualizarContadorDatos(); // Actualizar el label de cantidad al inicio
+    }
+
+    private JPanel crearPanelSuperior() {
+        JPanel panel = new JPanel(new BorderLayout(15, 15));
+        panel.setBackground(COLOR_FONDO);
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 30, 10, 30));
+
+        JLabel titulo = new JLabel("Método de la Transformada Inversa");
+        titulo.setFont(new Font("Inter", Font.BOLD, 24));
+        titulo.setForeground(COLOR_TEXTO);
+
+        JLabel subtitulo = new JLabel("Simulación automática basada en los números pseudoaleatorios generados previamente");
+        subtitulo.setFont(new Font("Inter", Font.PLAIN, 14));
+        subtitulo.setForeground(COLOR_TEXTO_SECUNDARIO);
+
+        JPanel panelTextos = new JPanel(new GridLayout(2, 1));
+        panelTextos.setBackground(COLOR_FONDO);
+        panelTextos.add(titulo);
+        panelTextos.add(subtitulo);
+
+        panel.add(panelTextos, BorderLayout.WEST);
+        return panel;
+    }
+
+    private JPanel crearPanelCentral() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(COLOR_FONDO);
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 30, 10, 30));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.insets = new Insets(0, 0, 0, 20);
+
+        // Configuración (Izquierda)
+        gbc.weightx = 0.25; gbc.weighty = 1.0; gbc.gridx = 0;
+        panel.add(crearPanelConfiguracion(), gbc);
+
+        // Tabla (Centro)
+        gbc.weightx = 0.30; gbc.gridx = 1;
+        panel.add(crearPanelTabla(), gbc);
+
+        // Gráfica (Derecha)
+        gbc.weightx = 0.45; gbc.insets = new Insets(0, 0, 0, 0); gbc.gridx = 2;
+        panel.add(crearPanelGrafica(), gbc);
+
+        return panel;
+    }
+
+    private JPanel crearPanelConfiguracion() {
+        JPanel card = new JPanel(new BorderLayout());
+        estilizarCard(card);
+
+        JPanel contenido = new JPanel();
+        contenido.setLayout(new BoxLayout(contenido, BoxLayout.Y_AXIS));
+        contenido.setBackground(COLOR_CARD);
+        contenido.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Selector de Conjunto
+        contenido.add(crearLabel("Fuente de Datos (Ri):"));
+        cbConjuntoRi = new JComboBox<>(new String[]{"Conjunto 1 (Entradas)", "Conjunto 2 (Salidas)"});
+        estilizarCombo(cbConjuntoRi);
+        cbConjuntoRi.addItemListener(e -> actualizarContadorDatos()); // Actualizar contador al cambiar conjunto
+        contenido.add(cbConjuntoRi);
+        contenido.add(Box.createRigidArea(new Dimension(0, 10)));
+        
+        // Label Informativo de Cantidad (N AUTOMÁTICO)
+        lblCantidadDatos = new JLabel("Cargando datos...");
+        lblCantidadDatos.setFont(new Font("Inter", Font.ITALIC, 12));
+        lblCantidadDatos.setForeground(COLOR_GRAFICA_BARRA); // Color verde para resaltar
+        contenido.add(lblCantidadDatos);
+        contenido.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        // Selector Distribución
+        contenido.add(crearLabel("Transformar a Distribución:"));
+        cbDistribucion = new JComboBox<>(new String[]{
+            "Uniforme (A, B)", 
+            "Exponencial (Media)", 
+            "Normal (Media, Desv.Est)", 
+            "Triangular (Min, Max, Moda)"
+        });
+        estilizarCombo(cbDistribucion);
+        cbDistribucion.addItemListener(e -> {
+            if (e.getStateChange() == ItemEvent.SELECTED) actualizarCamposInputs();
+        });
+        contenido.add(cbDistribucion);
+        contenido.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        // Parámetros Dinámicos
+        panelInputsDinamicos = new JPanel();
+        panelInputsDinamicos.setLayout(new BoxLayout(panelInputsDinamicos, BoxLayout.Y_AXIS));
+        panelInputsDinamicos.setBackground(COLOR_CARD);
+        
+        lblParam1 = crearLabel("Parámetro 1:"); txtParam1 = crearInput("");
+        lblParam2 = crearLabel("Parámetro 2:"); txtParam2 = crearInput("");
+        lblParam3 = crearLabel("Parámetro 3:"); txtParam3 = crearInput("");
+        
+        contenido.add(panelInputsDinamicos);
+        contenido.add(Box.createVerticalGlue());
+
+        // Botón
+        JButton btnGenerar = crearBoton("Transformar Datos", COLOR_PRIMARIO, true);
+        btnGenerar.addActionListener(e -> generarVariables());
+        
+        card.add(contenido, BorderLayout.CENTER);
+        card.add(btnGenerar, BorderLayout.SOUTH);
+
+        return card;
     }
     
-    private void generarTransformadas() {
-        modeloTabla.setRowCount(0);
-        List<Double> numeros = obtenerNumerosParaTransformar();
-        
-        if (numeros.isEmpty()) {
-            mostrarError("No hay números disponibles. Genere números primero o use números generados.");
+    private void actualizarContadorDatos() {
+        if (!SimulacionDatos.getInstancia().hayDatos()) {
+            lblCantidadDatos.setText("Sin datos disponibles (N=0)");
             return;
         }
         
-        String distribucion = (String) comboDistribucion.getSelectedItem();
-        
-        for (int i = 0; i < numeros.size(); i++) {
-            double u = numeros.get(i);
-            double x = transformarInversa(u, distribucion);
-            
-            modeloTabla.addRow(new Object[]{
-                i + 1,
-                String.format("%.6f", u),
-                String.format("%.6f", x),
-                distribucion
-            });
-        }
-        
-        mostrarExito(String.format("Se generaron %d transformadas con distribución %s", 
-            numeros.size(), distribucion));
-    }
-    
-    private double transformarInversa(double u, String distribucion) {
-        try {
-            switch(distribucion) {
-                case "Uniforme Continua":
-                    double a = Double.parseDouble(txtParam1.getText());
-                    double b = Double.parseDouble(txtParam2.getText());
-                    return a + (b - a) * u;
-                    
-                case "Exponencial":
-                    double lambda = Double.parseDouble(txtParam1.getText());
-                    return -Math.log(1 - u) / lambda;
-                    
-                case "Normal":
-                    double mu = Double.parseDouble(txtParam1.getText());
-                    double sigma = Double.parseDouble(txtParam2.getText());
-                    double u1 = u;
-                    double u2 = (u + 0.5) % 1.0;
-                    double z = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
-                    return mu + sigma * z;
-                    
-                case "Triangular":
-                    double triA = Double.parseDouble(txtParam1.getText());
-                    double triB = Double.parseDouble(txtParam2.getText());
-                    double c = Double.parseDouble(txtParam3.getText());
-                    if (u <= (c - triA) / (triB - triA)) {
-                        return triA + Math.sqrt(u * (triB - triA) * (c - triA));
-                    } else {
-                        return triB - Math.sqrt((1 - u) * (triB - triA) * (triB - c));
-                    }
-                    
-                case "Bernoulli":
-                    double p = Double.parseDouble(txtParam1.getText());
-                    return (u <= p) ? 1.0 : 0.0;
-                    
-                case "Binomial":
-                    int n = Integer.parseInt(txtParam1.getText());
-                    double prob = Double.parseDouble(txtParam2.getText());
-                    int exitos = 0;
-                    for (int i = 0; i < n; i++) {
-                        double uTemp = (u + i * 0.1) % 1.0;
-                        if (uTemp <= prob) exitos++;
-                    }
-                    return exitos;
-                    
-                default:
-                    return u;
-            }
-        } catch (Exception e) {
-            mostrarError("Error en parámetros: " + e.getMessage());
-            return 0.0;
-        }
-    }
-    
-    private List<Double> obtenerNumerosParaTransformar() {
-        GeneradorNumeros generador = GeneradorNumeros.getInstance();
-        if (generador.hayNumeros()) {
-            return new ArrayList<>(generador.getNumeros());
-        }
-        
-        List<Double> numeros = new ArrayList<>();
-        java.util.Random rand = new java.util.Random();
-        
-        for (int i = 0; i < 50; i++) {
-            numeros.add(rand.nextDouble());
-        }
-        
-        return numeros;
-    }
-    
-    private void usarNumerosGenerados() {
-        GeneradorNumeros generador = GeneradorNumeros.getInstance();
-        if (generador.hayNumeros()) {
-            int cantidad = generador.getNumeros().size();
-            mostrarExito("Usando " + cantidad + " números generados anteriormente.");
+        int n;
+        if (cbConjuntoRi.getSelectedIndex() == 0) {
+            n = SimulacionDatos.getInstancia().getConjunto1RiEn().size();
         } else {
-            mostrarError("No hay números generados. Genere números en el módulo de Generación primero.");
+            n = SimulacionDatos.getInstancia().getConjunto2RiSn().size();
         }
+        lblCantidadDatos.setText("✓ Se procesarán " + n + " registros automáticamente");
+    }
+
+    private JPanel crearPanelTabla() {
+        JPanel card = new JPanel(new BorderLayout());
+        estilizarCard(card);
+        
+        JLabel lblTitulo = new JLabel("Resultados Transformados");
+        lblTitulo.setFont(new Font("Inter", Font.BOLD, 16));
+        lblTitulo.setForeground(COLOR_TEXTO);
+        lblTitulo.setBorder(BorderFactory.createEmptyBorder(20, 20, 10, 20));
+        
+        String[] columnas = {"#", "Ri (Origen)", "Xi (Transformado)"};
+        modeloTabla = new DefaultTableModel(columnas, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        tablaResultados = new JTable(modeloTabla);
+        estilizarTabla(tablaResultados);
+        
+        JScrollPane scroll = new JScrollPane(tablaResultados);
+        scroll.setBorder(BorderFactory.createEmptyBorder(0,5,5,5));
+        scroll.getViewport().setBackground(COLOR_CARD);
+        
+        card.add(lblTitulo, BorderLayout.NORTH);
+        card.add(scroll, BorderLayout.CENTER);
+        return card;
+    }
+
+    private JPanel crearPanelGrafica() {
+        JPanel card = new JPanel(new BorderLayout());
+        estilizarCard(card);
+        JLabel lblTitulo = new JLabel("Histograma Resultante");
+        lblTitulo.setFont(new Font("Inter", Font.BOLD, 16));
+        lblTitulo.setForeground(COLOR_TEXTO);
+        lblTitulo.setBorder(BorderFactory.createEmptyBorder(20, 20, 10, 20));
+        
+        panelGrafica = new PanelGraficaHistograma();
+        panelGrafica.setBackground(COLOR_CARD);
+        card.add(lblTitulo, BorderLayout.NORTH);
+        card.add(panelGrafica, BorderLayout.CENTER);
+        return card;
+    }
+
+    private JPanel crearPanelInferior() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 20, 20));
+        panel.setBackground(COLOR_FONDO);
+        JButton btnLimpiar = crearBoton("Limpiar", new Color(239,68,68), false);
+        btnLimpiar.addActionListener(e -> limpiarDatos());
+        JButton btnVolver = crearBoton("Volver al Menú", COLOR_TEXTO_SECUNDARIO, false);
+        btnVolver.addActionListener(e -> { new MenuPrincipal().setVisible(true); dispose(); });
+        panel.add(btnLimpiar); panel.add(btnVolver);
+        return panel;
+    }
+
+    // --- LÓGICA ---
+    private void actualizarCamposInputs() {
+        panelInputsDinamicos.removeAll();
+        String sel = (String) cbDistribucion.getSelectedItem();
+        
+        // Configuramos solo los parámetros necesarios para la FÓRMULA de transformación
+        // (A, B, Media, etc), NO la cantidad ni límites de iteración.
+        if (sel.contains("Uniforme")) {
+            agregarCampo(lblParam1, txtParam1, "Límite A (Mín):", "0");
+            agregarCampo(lblParam2, txtParam2, "Límite B (Máx):", "10");
+        } else if (sel.contains("Exponencial")) {
+            agregarCampo(lblParam1, txtParam1, "Media (μ):", "5");
+        } else if (sel.contains("Normal")) {
+            agregarCampo(lblParam1, txtParam1, "Media (μ):", "100");
+            agregarCampo(lblParam2, txtParam2, "Desv. Est (σ):", "15");
+        } else if (sel.contains("Triangular")) {
+            agregarCampo(lblParam1, txtParam1, "Mín (a):", "10");
+            agregarCampo(lblParam2, txtParam2, "Máx (b):", "30");
+            agregarCampo(lblParam3, txtParam3, "Moda (c):", "25");
+        }
+        panelInputsDinamicos.revalidate(); panelInputsDinamicos.repaint();
     }
     
-    // Métodos de estilo (similares a Practica3.java)
-    private JButton crearBotonModerno(String texto, Color color) {
-        JButton boton = new JButton(texto) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+    private void agregarCampo(JLabel lbl, JTextField txt, String t, String v) {
+        lbl.setText(t); txt.setText(v);
+        panelInputsDinamicos.add(lbl); panelInputsDinamicos.add(txt);
+        panelInputsDinamicos.add(Box.createRigidArea(new Dimension(0, 15)));
+    }
+
+    private void generarVariables() {
+        if (!SimulacionDatos.getInstancia().hayDatos()) {
+            JOptionPane.showMessageDialog(this, "No hay datos Ri cargados.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        try {
+            // 1. Obtener la lista COMPLETA de datos automáticamente
+            List<Double> listaRi;
+            if (cbConjuntoRi.getSelectedIndex() == 0) 
+                listaRi = SimulacionDatos.getInstancia().getConjunto1RiEn();
+            else 
+                listaRi = SimulacionDatos.getInstancia().getConjunto2RiSn();
                 
-                if (getModel().isPressed()) {
-                    g2.setColor(color.darker());
-                } else if (getModel().isRollover()) {
-                    g2.setColor(color.brighter());
-                } else {
-                    g2.setColor(color);
+            int n = listaRi.size(); // N se toma directamente de la lista
+            
+            limpiarDatos();
+            String sel = (String) cbDistribucion.getSelectedItem();
+            SimulacionDatos math = SimulacionDatos.getInstancia();
+            
+            // 2. Parsear parámetros de la DISTRIBUCIÓN (No de iteración)
+            double p1=0, p2=0, p3=0;
+            if(!txtParam1.getText().isEmpty()) p1 = Double.parseDouble(txtParam1.getText());
+            if(txtParam2.isShowing()) p2 = Double.parseDouble(txtParam2.getText());
+            if(txtParam3.isShowing()) p3 = Double.parseDouble(txtParam3.getText());
+
+            // 3. Transformar TODOS los datos
+            for (int i = 0; i < n; i++) {
+                double ri = listaRi.get(i);
+                double xi = 0;
+                
+                if (sel.contains("Uniforme")) {
+                    // X = A + (B-A)Ri
+                    xi = math.calcularUniforme(ri, p1, p2); 
+                } else if (sel.contains("Exponencial")) {
+                    xi = math.calcularExponencial(ri, p1);
+                } else if (sel.contains("Normal")) {
+                    xi = math.calcularNormal(ri, p1, p2);
+                } else if (sel.contains("Triangular")) {
+                    double a=p1, b=p2, c=p3;
+                    double corte = (c-a)/(b-a);
+                    if (ri < corte) xi = a + Math.sqrt(ri*(b-a)*(c-a));
+                    else xi = b - Math.sqrt((1-ri)*(b-a)*(b-c));
                 }
                 
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
-                g2.dispose();
+                datosSimulados.add(xi);
+                datosRiUtilizados.add(ri);
                 
-                super.paintComponent(g);
+                if(i < 5000) modeloTabla.addRow(new Object[]{i+1, String.format("%.5f", ri), String.format("%.4f", xi)});
+            }
+            
+            panelGrafica.setDatos(datosSimulados, sel);
+            
+        } catch(Exception ex) {
+            JOptionPane.showMessageDialog(this, "Verifique los parámetros numéricos de la distribución.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void limpiarDatos() {
+        datosSimulados.clear(); datosRiUtilizados.clear();
+        modeloTabla.setRowCount(0); panelGrafica.limpiar();
+    }
+
+    // --- Helpers UI (Estilos) ---
+    private void estilizarCard(JPanel p) {
+        p.setBackground(COLOR_CARD);
+        p.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(COLOR_BORDE,1),BorderFactory.createEmptyBorder(0,0,0,0)));
+    }
+    private JLabel crearLabel(String t) {
+        JLabel l = new JLabel(t); l.setFont(new Font("Inter",Font.BOLD,12));
+        l.setForeground(COLOR_TEXTO_SECUNDARIO); l.setAlignmentX(Component.LEFT_ALIGNMENT); return l;
+    }
+    private JTextField crearInput(String t) {
+        JTextField x = new JTextField(t); x.setFont(new Font("Inter",Font.PLAIN,14));
+        x.setBackground(COLOR_HOVER); x.setForeground(COLOR_TEXTO); x.setCaretColor(COLOR_TEXTO);
+        x.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(COLOR_BORDE),BorderFactory.createEmptyBorder(8,10,8,10)));
+        x.setMaximumSize(new Dimension(Integer.MAX_VALUE,40)); x.setAlignmentX(Component.LEFT_ALIGNMENT); return x;
+    }
+    private void estilizarCombo(JComboBox<String> c) {
+        c.setFont(new Font("Inter",Font.PLAIN,14)); c.setBackground(COLOR_HOVER); c.setForeground(Color.WHITE);
+        c.setBorder(BorderFactory.createLineBorder(COLOR_BORDE)); c.setMaximumSize(new Dimension(Integer.MAX_VALUE,40)); c.setAlignmentX(Component.LEFT_ALIGNMENT);
+    }
+    private JButton crearBoton(String t, Color c, boolean r) {
+        JButton b = new JButton(t) {
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D)g.create(); g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
+                if(getModel().isPressed()) g2.setColor(c.darker()); else if(getModel().isRollover()) g2.setColor(r?c.brighter():COLOR_HOVER); else g2.setColor(r?c:COLOR_CARD);
+                g2.fillRoundRect(0,0,getWidth(),getHeight(),8,8);
+                if(!r){ g2.setColor(c); g2.setStroke(new BasicStroke(1.5f)); g2.drawRoundRect(1,1,getWidth()-2,getHeight()-2,8,8); }
+                g2.dispose(); super.paintComponent(g);
             }
         };
-        
-        boton.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        boton.setForeground(Color.WHITE);
-        boton.setContentAreaFilled(false);
-        boton.setBorderPainted(false);
-        boton.setFocusPainted(false);
-        boton.setBorder(BorderFactory.createEmptyBorder(12, 25, 12, 25));
-        boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        
-        return boton;
+        b.setFont(new Font("Inter",Font.BOLD,13)); b.setForeground(r?Color.WHITE:c); b.setContentAreaFilled(false); b.setBorderPainted(false); b.setFocusPainted(false);
+        b.setCursor(new Cursor(Cursor.HAND_CURSOR)); b.setPreferredSize(new Dimension(150,40)); return b;
     }
-    
-    private JButton crearBotonIcono(String texto, Color color) {
-        JButton boton = new JButton(texto);
-        boton.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        boton.setForeground(color);
-        boton.setContentAreaFilled(false);
-        boton.setBorderPainted(false);
-        boton.setFocusPainted(false);
-        boton.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-        boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        
-        boton.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseEntered(java.awt.event.MouseEvent e) {
-                boton.setForeground(COLOR_TEXTO);
+    private void estilizarTabla(JTable t) {
+        t.setFont(new Font("Inter",Font.PLAIN,13)); t.setBackground(COLOR_CARD); t.setForeground(COLOR_TEXTO); t.setGridColor(COLOR_BORDE);
+        t.setRowHeight(28); t.setShowVerticalLines(true); t.setShowHorizontalLines(true);
+        t.getTableHeader().setFont(new Font("Inter",Font.BOLD,13)); t.getTableHeader().setBackground(COLOR_HOVER); t.getTableHeader().setForeground(COLOR_TEXTO);
+        t.getTableHeader().setBorder(BorderFactory.createMatteBorder(0,0,1,0,COLOR_BORDE));
+        DefaultTableCellRenderer r = new DefaultTableCellRenderer(); r.setHorizontalAlignment(JLabel.CENTER);
+        for(int i=0;i<t.getColumnCount();i++) t.getColumnModel().getColumn(i).setCellRenderer(r);
+    }
+
+    // --- Panel Histograma ---
+    private class PanelGraficaHistograma extends JPanel {
+        private List<Double> d; private String tit; private int nInt;
+        public void setDatos(List<Double> datos, String t) {
+            this.d = datos; this.tit = t;
+            this.nInt = (int)Math.sqrt(datos.size()); if(nInt<5)nInt=5; if(nInt>50)nInt=50;
+            repaint();
+        }
+        public void limpiar() { this.d=null; repaint(); }
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            if(d==null||d.isEmpty()) { g.setColor(COLOR_TEXTO_SECUNDARIO); g.drawString("Sin datos transformados", 20, 30); return; }
+            Graphics2D g2 = (Graphics2D)g; g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
+            int w=getWidth(), h=getHeight(), pad=40;
+            double min=Collections.min(d), max=Collections.max(d); if(min==max)max+=1;
+            int[] f = new int[nInt]; double anc=(max-min)/nInt; int maxF=0;
+            for(double v:d) { int i=(int)((v-min)/anc); if(i>=nInt)i=nInt-1; f[i]++; if(f[i]>maxF)maxF=f[i]; }
+            g2.setColor(COLOR_TEXTO_SECUNDARIO); g2.drawLine(pad,h-pad,w-pad,h-pad); g2.drawLine(pad,pad,pad,h-pad);
+            double bw=(double)(w-2*pad)/nInt;
+            for(int i=0;i<nInt;i++) {
+                double bh=((double)f[i]/maxF)*(h-2*pad);
+                int x=pad+(int)(i*bw), y=h-pad-(int)bh;
+                g2.setColor(COLOR_GRAFICA_BARRA); g2.fillRect(x,y,(int)bw-1,(int)bh);
+                g2.setColor(COLOR_GRAFICA_BARRA.darker()); g2.drawRect(x,y,(int)bw-1,(int)bh);
             }
-            
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent e) {
-                boton.setForeground(color);
-            }
-        });
-        
-        return boton;
-    }
-    
-    private void estilizarComboBox(JComboBox<?> combo) {
-        combo.setBackground(new Color(45, 45, 48));
-        combo.setForeground(COLOR_TEXTO);
-        combo.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(60, 60, 60), 1),
-            BorderFactory.createEmptyBorder(10, 15, 10, 15)
-        ));
-        combo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        combo.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value,
-                    int index, boolean isSelected, boolean cellHasFocus) {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                setBackground(isSelected ? COLOR_PRIMARIO : new Color(45, 45, 48));
-                setForeground(isSelected ? Color.WHITE : COLOR_TEXTO);
-                return this;
-            }
-        });
-    }
-    
-    private void estilizarTabla(JTable tabla) {
-        tabla.setRowHeight(40);
-        tabla.setBackground(COLOR_CARD);
-        tabla.setForeground(COLOR_TEXTO);
-        tabla.setGridColor(new Color(60, 60, 60));
-        tabla.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        
-        tabla.getTableHeader().setBackground(new Color(45, 45, 48));
-        tabla.getTableHeader().setForeground(COLOR_TEXTO);
-        tabla.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
-        
-        tabla.setDefaultRenderer(Object.class, new javax.swing.table.DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable table, Object value,
-                    boolean isSelected, boolean hasFocus, int row, int column) {
-                Component c = super.getTableCellRendererComponent(table, value, 
-                    isSelected, hasFocus, row, column);
-                
-                if (isSelected) {
-                    c.setBackground(COLOR_PRIMARIO);
-                    c.setForeground(Color.WHITE);
-                } else {
-                    c.setBackground(row % 2 == 0 ? COLOR_CARD : new Color(40, 40, 42));
-                    c.setForeground(COLOR_TEXTO);
-                }
-                
-                setBorder(BorderFactory.createEmptyBorder(0, 15, 0, 15));
-                setHorizontalAlignment(SwingConstants.CENTER);
-                return c;
-            }
-        });
-    }
-    
-    private void mostrarExito(String mensaje) {
-        JOptionPane.showMessageDialog(this, 
-            "<html><div style='color: #57a64a; font-family: Segoe UI;'>✓ " + mensaje + "</div></html>",
-            "Éxito", JOptionPane.INFORMATION_MESSAGE);
-    }
-    
-    private void mostrarError(String mensaje) {
-        JOptionPane.showMessageDialog(this, 
-            "<html><div style='color: #dc6e6e; font-family: Segoe UI;'>✗ " + mensaje + "</div></html>",
-            "Error", JOptionPane.ERROR_MESSAGE);
+            g2.setColor(COLOR_TEXTO); g2.setFont(new Font("Inter",Font.PLAIN,10));
+            g2.drawString(String.format("%.2f",min),pad,h-pad+15); g2.drawString(String.format("%.2f",max),w-pad-40,h-pad+15);
+            g2.setFont(new Font("Inter",Font.BOLD,12)); g2.drawString(tit!=null?tit:"Distribución",pad+10,pad-10);
+        }
     }
 }

@@ -1,7 +1,13 @@
 {
     "java.project.sourcePaths": ["src"],
     "java.project.outputPath": "bin",
-    "java.project.referencedLibraries": [
-        "lib/**/*.jar"
-    ]
+    "java.project.referencedLibraries": {
+        "include": [
+            "lib/**/*.jar",
+            "c:\\Users\\irvin\\Documents\\VisualStudioCode\\commons-math3-3.0.jar"
+        ],
+        "exclude": [
+            "c:\\Users\\irvin\\Documents\\VisualStudioCode\\itextpdf-5.5.9.jar"
+        ]
+    }
 }

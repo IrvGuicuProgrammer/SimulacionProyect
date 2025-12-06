@@ -6,15 +6,14 @@ public class MenuPrincipal extends JFrame {
     
     private final Color COLOR_FONDO = new Color(18, 18, 20);
     private final Color COLOR_CARD = new Color(30, 30, 32);
-    private final Color COLOR_PRIMARIO = new Color(0, 120, 215);
-    private final Color COLOR_SECUNDARIO = new Color(16, 110, 190);
+    private final Color COLOR_AZUL = new Color(0, 120, 215);
     private final Color COLOR_TEXTO = new Color(240, 240, 240);
     private final Color COLOR_TEXTO_SECUNDARIO = new Color(180, 180, 180);
     
     public MenuPrincipal() {
         setTitle("SIMULACIÓN - MENÚ PRINCIPAL");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setSize(700, 750);
+        setSize(1000, 800);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
         getContentPane().setBackground(COLOR_FONDO);
@@ -39,28 +38,28 @@ public class MenuPrincipal extends JFrame {
         panelCentral.add(crearTarjetaModulo(
             "1. GENERACIÓN Y PRUEBAS ESTADÍSTICAS",
             "Genera números pseudoaleatorios y ejecuta pruebas de calidad",
-            COLOR_PRIMARIO,
+            COLOR_AZUL,
             e -> abrirVentana(new Pseudoaleatorios())
         ), gbc);
         
         panelCentral.add(crearTarjetaModulo(
             "2. TRANSFORMADAS INVERSAS",
             "Aplica transformadas inversas a diferentes distribuciones",
-            new Color(87, 166, 74),
+            COLOR_AZUL,
             e -> abrirVentana(new TransformadasInversas())
         ), gbc);
         
         panelCentral.add(crearTarjetaModulo(
             "3. SIMULACIÓN TORTILLERÍA",
             "Simula el flujo de clientes con datos reales de La Providencia",
-            new Color(255, 153, 0),
+            COLOR_AZUL,
             e -> abrirVentana(new SimulacionTortilleria())
         ), gbc);
         
         panelCentral.add(crearTarjetaModulo(
             "4. INFORMACIÓN DEL PROYECTO",
             "Detalles técnicos y documentación del sistema",
-            new Color(180, 100, 255),
+            COLOR_AZUL,
             e -> mostrarInformacion()
         ), gbc);
         
@@ -69,7 +68,7 @@ public class MenuPrincipal extends JFrame {
         panelInferior.setBackground(COLOR_FONDO);
         panelInferior.setBorder(BorderFactory.createEmptyBorder(0, 40, 30, 40));
         
-        JButton btnSalir = crearBotonModerno("SALIR", new Color(220, 70, 70));
+        JButton btnSalir = crearBotonModerno("SALIR", COLOR_AZUL);
         btnSalir.addActionListener(e -> System.exit(0));
         
         panelInferior.add(btnSalir, BorderLayout.CENTER);
@@ -235,7 +234,7 @@ public class MenuPrincipal extends JFrame {
         btnCerrar.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent e) {
-                btnCerrar.setForeground(new Color(220, 70, 70));
+                btnCerrar.setForeground(COLOR_AZUL);
             }
             
             @Override
@@ -255,20 +254,20 @@ public class MenuPrincipal extends JFrame {
     private void mostrarInformacion() {
         String info = "<html><div style='font-family: Segoe UI; color: #f0f0f0; text-align: center;'>" +
             "<h2 style='color: #0078d7; margin-bottom: 10px;'>PRÁCTICA 3 - SIMULACIÓN</h2>" +
-            "<h3 style='color: #ff9900; margin-top: 0;'>Tortillería La Providencia</h3>" +
+            "<h3 style='color: #0078d7; margin-top: 0;'>Tortillería La Providencia</h3>" +
             "<div style='border-bottom: 1px solid #3e3e42; margin: 20px 0;'></div>" +
             
             "<div style='text-align: left; margin: 0 auto; max-width: 400px;'>" +
-            "<p style='margin: 10px 0;'><span style='color: #57a64a; font-weight: bold;'>Institución:</span><br>Tecnológico Superior de Tacámbaro</p>" +
-            "<p style='margin: 10px 0;'><span style='color: #57a64a; font-weight: bold;'>Carrera:</span><br>Ingeniería en Sistemas Computacionales</p>" +
-            "<p style='margin: 10px 0;'><span style='color: #57a64a; font-weight: bold;'>Materia:</span><br>Simulación - 5° Semestre</p>" +
-            "<p style='margin: 10px 0;'><span style='color: #57a64a; font-weight: bold;'>Profesor:</span><br>Oscar Alvarez Arriaga</p>" +
+            "<p style='margin: 10px 0;'><span style='color: #0078d7; font-weight: bold;'>Institución:</span><br>Tecnológico Superior de Tacámbaro</p>" +
+            "<p style='margin: 10px 0;'><span style='color: #0078d7; font-weight: bold;'>Carrera:</span><br>Ingeniería en Sistemas Computacionales</p>" +
+            "<p style='margin: 10px 0;'><span style='color: #0078d7; font-weight: bold;'>Materia:</span><br>Simulación - 5° Semestre</p>" +
+            "<p style='margin: 10px 0;'><span style='color: #0078d7; font-weight: bold;'>Profesor:</span><br>Oscar Alvarez Arriaga</p>" +
             "</div>" +
             
             "<div style='border-bottom: 1px solid #3e3e42; margin: 20px 0;'></div>" +
             
             "<div style='text-align: left; margin: 0 auto; max-width: 400px;'>" +
-            "<p style='color: #ff9900; font-weight: bold; margin-bottom: 10px;'>Integrantes:</p>" +
+            "<p style='color: #0078d7; font-weight: bold; margin-bottom: 10px;'>Integrantes:</p>" +
             "<p style='margin: 5px 0;'>• Irving Guijoza Cuellar (23940030)</p>" +
             "<p style='margin: 5px 0;'>• Victor Saul Franco Maldonado (23940019)</p>" +
             "<p style='margin: 5px 0;'>• Eduardo Salvador Ambriz Ortega (22940024)</p>" +

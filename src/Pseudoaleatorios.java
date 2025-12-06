@@ -1,597 +1,1068 @@
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
-import java.util.*;
+import java.awt.geom.*;
 import java.util.List;
-import javax.swing.border.EmptyBorder;
+import java.util.ArrayList;
+import java.text.DecimalFormat;
 
 public class Pseudoaleatorios extends JFrame {
     
-    private final Color COLOR_FONDO = new Color(18, 18, 20);
-    private final Color COLOR_CARD = new Color(30, 30, 32);
-    private final Color COLOR_PRIMARIO = new Color(0, 150, 255);   // Más brillante
-    private final Color COLOR_EXITO = new Color(100, 200, 100);    // Verde brillante
-    private final Color COLOR_NARANJA = new Color(255, 165, 0);    // Naranja brillante
-    private final Color COLOR_TEXTO = new Color(240, 240, 240);
-    private final Color COLOR_TEXTO_SECUNDARIO = new Color(200, 200, 200);
+    // Paleta de colores oscura
+    private final Color COLOR_FONDO = new Color(15, 15, 20);//Negro azulado
+    private final Color COLOR_CARD = new Color(30, 30, 40);//azul carbon
+    private final Color COLOR_PRIMARIO = new Color(99, 102, 241); // Indigo
+    private final Color COLOR_TEXTO = new Color(240, 240, 245);//Blanco suave
+    private final Color COLOR_TEXTO_SECUNDARIO = new Color(160, 165, 180);//Gris frio
+    private final Color COLOR_BORDE = new Color(50, 55, 65);//Slate gris
+    private final Color COLOR_EXITO = new Color(16, 185, 129); // Green
+    private final Color COLOR_ERROR = new Color(239, 68, 68); // Red
+    private final Color COLOR_HOVER = new Color(40, 45, 55);//Slate oscuro
+    private final Color COLOR_NEGRO = new Color(0,0,0);//Pos negro xd
+    private final Color COLOR_ACEPTACION = new Color(16, 185, 129, 100); // Verde transparente
+    private final Color COLOR_RECHAZO = new Color(239, 68, 68, 100); // Rojo transparente
+    private final Color COLOR_CURVA = new Color(99, 102, 241); // Indigo para la curva
+    private final Color COLOR_LINEA = new Color(245, 158, 11); // Amarillo para la línea del estadístico
+    private final Color COLOR_CONJUNTO1 = new Color(99, 102, 241); // Azul para conjunto 1
+    private final Color COLOR_CONJUNTO2 = new Color(239, 68, 68);  // Rojo para conjunto 2
     
-    private JTextField txtN, txtX0, txtA, txtC, txtM;
-    private JTable tablaGenerados;
-    private DefaultTableModel modeloGenerados;
-    private JComboBox<String> comboConfianza;
-    private JButton btnGenerar, btnEjecutarPruebas, btnRegresar;
-    private JTabbedPane panelPruebas;
-    private List<Double> numeros = new ArrayList<>();
+    private JComboBox<String> cbMetodo;
+    private JComboBox<String> cbConfianza;
+    private JPanel panelParametros;
+    private JTextField txtN;
+    private JTextField txtX0;
+    private JTextField txtA;
+    private JTextField txtC;
+    private JTextField txtM;
+    private JTextField txtSemilla;
+    private JTabbedPane tabbedPaneNumeros;
+    private JTable tablaNumeros1;
+    private JTable tablaNumeros2;
+    private JScrollPane scrollPruebas;
+    private JPanel panelPruebas;
+    private List<Double>[] numerosGenerados; // Array de listas para 2 conjuntos
+    private double nivelConfianza = 0.95; // Valor por defecto
+    private EstadisticasCalculador.ResultadoPrueba[] resultadosPruebasConjunto1;
+    private EstadisticasCalculador.ResultadoPrueba[] resultadosPruebasConjunto2;
+    private int conjuntoPruebasActual = 0; // 0 para conjunto 1, 1 para conjunto 2
     
     public Pseudoaleatorios() {
-        setTitle("GENERACIÓN Y PRUEBAS ESTADÍSTICAS");
+        setTitle("Generador de Números Pseudoaleatorios - 2 Conjuntos");
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        setSize(1300, 850);  // Tamaño aumentado
+        setSize(1600, 900); // Ventana más ancha
         setLocationRelativeTo(null);
+        setLayout(new BorderLayout(0, 0));
         getContentPane().setBackground(COLOR_FONDO);
         
-        // Panel principal
-        JPanel panelPrincipal = new JPanel(new BorderLayout(0, 0));
-        panelPrincipal.setBackground(COLOR_FONDO);
-        panelPrincipal.setBorder(new EmptyBorder(10, 10, 10, 10));
+        // Inicializar todos los campos de texto
+        txtN = new JTextField();
+        txtX0 = new JTextField();
+        txtA = new JTextField();
+        txtC = new JTextField();
+        txtM = new JTextField();
+        txtSemilla = new JTextField();
         
-        // Barra superior mejorada
-        panelPrincipal.add(crearBarraSuperior(), BorderLayout.NORTH);
+        // Inicializar arrays de resultados para 2 conjuntos
+        resultadosPruebasConjunto1 = new EstadisticasCalculador.ResultadoPrueba[6];
+        resultadosPruebasConjunto2 = new EstadisticasCalculador.ResultadoPrueba[6];
         
-        // Panel central con pestañas
-        panelPruebas = new JTabbedPane();
-        panelPruebas.setBackground(COLOR_FONDO);
-        panelPruebas.setForeground(COLOR_TEXTO);
-        panelPruebas.setFont(new Font("Segoe UI", Font.BOLD, 14));  // Negrita
-        panelPruebas.setBorder(BorderFactory.createLineBorder(COLOR_PRIMARIO, 1));
+        // Inicializar array de números generados
+        numerosGenerados = new ArrayList[2];
+        numerosGenerados[0] = new ArrayList<>();
+        numerosGenerados[1] = new ArrayList<>();
         
-        // Pestañas con íconos
-        panelPruebas.addTab("🔢 Generación", crearPanelGeneracion());
-        panelPruebas.addTab("📊 Pruebas Básicas", crearPanelPruebasBasicas());
-        panelPruebas.addTab("🎯 Pruebas Avanzadas", crearPanelPruebasAvanzadas());
+        // Panel principal con padding
+        JPanel mainPanel = new JPanel(new BorderLayout(20, 20));
+        mainPanel.setBackground(COLOR_FONDO);
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         
-        panelPrincipal.add(panelPruebas, BorderLayout.CENTER);
+        mainPanel.add(crearPanelSuperior(), BorderLayout.NORTH);
+        mainPanel.add(crearPanelCentral(), BorderLayout.CENTER);
+        mainPanel.add(crearPanelInferior(), BorderLayout.SOUTH);
         
-        add(panelPrincipal);
-        configurarAcciones();
-        
-        // Agregar sombra a la ventana
-        getRootPane().setWindowDecorationStyle(JRootPane.NONE);
+        add(mainPanel);
     }
     
-    private JPanel crearBarraSuperior() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(COLOR_CARD);
-        panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 3, 0, COLOR_PRIMARIO),
-            BorderFactory.createEmptyBorder(15, 25, 15, 25)
-        ));
+    private JPanel crearPanelSuperior() {
+        JPanel panel = new JPanel(new BorderLayout(15, 15));
+        panel.setBackground(COLOR_FONDO);
         
-        // Título con ícono
-        JPanel panelTitulo = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        panelTitulo.setBackground(COLOR_CARD);
-        
-        JLabel icono = new JLabel("🔢");
-        icono.setFont(new Font("Segoe UI", Font.PLAIN, 24));
-        icono.setForeground(COLOR_PRIMARIO);
-        
-        JLabel titulo = new JLabel("GENERACIÓN DE NÚMEROS PSEUDOALEATORIOS");
-        titulo.setFont(new Font("Segoe UI", Font.BOLD, 20));  // Tamaño aumentado
+        // Título principal
+        JLabel titulo = new JLabel("Generador de Números Pseudoaleatorios");
+        titulo.setFont(new Font("Inter", Font.BOLD, 26));
         titulo.setForeground(COLOR_TEXTO);
         
-        panelTitulo.add(icono);
-        panelTitulo.add(titulo);
+        // Subtítulo
+        JLabel subtitulo = new JLabel("Genera 2 conjuntos para simulación de entrada/salida - !Cada conjunto ejecuta pruebas por separado!");
+        subtitulo.setFont(new Font("Inter", Font.PLAIN, 14));
+        subtitulo.setForeground(COLOR_TEXTO_SECUNDARIO);
         
-        // Botón regresar mejorado
-        btnRegresar = crearBotonConIcono("← Regresar", COLOR_PRIMARIO);
-        btnRegresar.addActionListener(e -> {
-            new MenuPrincipal().setVisible(true);
-            this.dispose();
-        });
+        // Panel de selectores
+        JPanel panelSelectores = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        panelSelectores.setBackground(COLOR_FONDO);
         
-        panel.add(panelTitulo, BorderLayout.CENTER);
-        panel.add(btnRegresar, BorderLayout.EAST);
+        // Selector de método
+        JLabel lblMetodo = new JLabel("Método:");
+        lblMetodo.setFont(new Font("Inter", Font.BOLD, 14));
+        lblMetodo.setForeground(COLOR_TEXTO);
         
-        return panel;
-    }
-    
-    private JPanel crearPanelGeneracion() {
-        JPanel panel = new JPanel(new BorderLayout(25, 25));
-        panel.setBackground(COLOR_FONDO);
-        panel.setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
-        
-        // Panel de parámetros - Tarjeta con fondo
-        JPanel panelParametros = crearTarjeta("PARÁMETROS DEL GENERADOR", 25);
-        
-        JPanel gridParams = new JPanel(new GridLayout(2, 5, 20, 20));
-        gridParams.setBackground(COLOR_CARD);
-        gridParams.setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
-        
-        // Crear campos con etiquetas mejoradas
-        gridParams.add(crearCampoConEtiquetaMejorado("n:", "50"));
-        txtN = ((JTextField) ((JPanel) gridParams.getComponent(0)).getComponent(1));
-        
-        gridParams.add(crearCampoConEtiquetaMejorado("Semilla X₀:", "97"));
-        txtX0 = ((JTextField) ((JPanel) gridParams.getComponent(1)).getComponent(1));
-        
-        gridParams.add(crearCampoConEtiquetaMejorado("a:", "165"));
-        txtA = ((JTextField) ((JPanel) gridParams.getComponent(2)).getComponent(1));
-        
-        gridParams.add(crearCampoConEtiquetaMejorado("c:", "21"));
-        txtC = ((JTextField) ((JPanel) gridParams.getComponent(3)).getComponent(1));
-        
-        gridParams.add(crearCampoConEtiquetaMejorado("m:", "256"));
-        txtM = ((JTextField) ((JPanel) gridParams.getComponent(4)).getComponent(1));
-        
-        panelParametros.add(gridParams, BorderLayout.CENTER);
-        
-        // Panel de controles mejorado
-        JPanel panelControles = crearTarjeta("CONTROLES", 25);
-        panelControles.setLayout(new FlowLayout(FlowLayout.CENTER, 25, 20));
-        
-        btnGenerar = crearBotonGrande("🚀 GENERAR NÚMEROS", COLOR_PRIMARIO);
-        panelControles.add(btnGenerar);
-        
-        JPanel panelConfianza = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
-        panelConfianza.setBackground(COLOR_CARD);
-        
-        JLabel lblConfianza = new JLabel("📊 Nivel de confianza:");
-        lblConfianza.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        lblConfianza.setForeground(COLOR_TEXTO);
-        panelConfianza.add(lblConfianza);
-        
-        comboConfianza = new JComboBox<>(new String[]{"99%", "95%", "90%", "87%", "85%"});
-        comboConfianza.setSelectedIndex(1);
-        estilizarComboBoxMejorado(comboConfianza);
-        panelConfianza.add(comboConfianza);
-        
-        panelControles.add(panelConfianza);
-        
-        btnEjecutarPruebas = crearBotonGrande("✅ EJECUTAR PRUEBAS", COLOR_EXITO);
-        panelControles.add(btnEjecutarPruebas);
-        
-        // Tabla de números generados - Tarjeta
-        JPanel panelTabla = crearTarjeta("NÚMEROS GENERADOS", 25);
-        
-        modeloGenerados = new DefaultTableModel(new Object[]{"#", "Número Pseudoaleatorio"}, 0);
-        tablaGenerados = new JTable(modeloGenerados);
-        estilizarTablaMejorada(tablaGenerados);
-        
-        JScrollPane scrollTabla = new JScrollPane(tablaGenerados);
-        scrollTabla.getViewport().setBackground(COLOR_CARD);
-        scrollTabla.setBorder(null);
-        
-        panelTabla.add(scrollTabla, BorderLayout.CENTER);
-        
-        // Panel de estadísticas de la tabla
-        JPanel panelStats = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        panelStats.setBackground(new Color(40, 40, 45));
-        panelStats.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-        
-        JLabel lblStats = new JLabel("🔢 Total de números: 0");
-        lblStats.setForeground(COLOR_TEXTO_SECUNDARIO);
-        lblStats.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        panelStats.add(lblStats);
-        
-        panelTabla.add(panelStats, BorderLayout.SOUTH);
-        
-        // Layout principal
-        JPanel panelSuperior = new JPanel(new BorderLayout(25, 25));
-        panelSuperior.setBackground(COLOR_FONDO);
-        panelSuperior.add(panelParametros, BorderLayout.NORTH);
-        panelSuperior.add(panelControles, BorderLayout.CENTER);
-        
-        panel.add(panelSuperior, BorderLayout.NORTH);
-        panel.add(panelTabla, BorderLayout.CENTER);
-        
-        return panel;
-    }
-    
-    private JPanel crearTarjeta(String titulo, int padding) {
-        JPanel tarjeta = new JPanel(new BorderLayout());
-        tarjeta.setBackground(COLOR_CARD);
-        tarjeta.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(60, 60, 60), 1),
-            BorderFactory.createEmptyBorder(padding, padding, padding, padding)
-        ));
-        
-        if (titulo != null) {
-            JLabel lblTitulo = new JLabel(titulo);
-            lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 16));
-            lblTitulo.setForeground(COLOR_PRIMARIO);
-            lblTitulo.setBorder(BorderFactory.createEmptyBorder(0, 0, 15, 0));
-            tarjeta.add(lblTitulo, BorderLayout.NORTH);
-        }
-        
-        return tarjeta;
-    }
-    
-    private JPanel crearCampoConEtiquetaMejorado(String etiqueta, String valor) {
-        JPanel panel = new JPanel(new BorderLayout(15, 5));
-        panel.setBackground(COLOR_CARD);
-        
-        JLabel lbl = new JLabel(etiqueta);
-        lbl.setForeground(COLOR_TEXTO);
-        lbl.setFont(new Font("Segoe UI", Font.BOLD, 14));  // Negrita
-        
-        JTextField campo = new JTextField(valor, 10);
-        estilizarCampoTextoMejorado(campo);
-        
-        panel.add(lbl, BorderLayout.WEST);
-        panel.add(campo, BorderLayout.CENTER);
-        
-        return panel;
-    }
-    
-    private JPanel crearPanelPruebasBasicas() {
-        JPanel panel = new JPanel(new GridLayout(3, 1, 20, 20));
-        panel.setBackground(COLOR_FONDO);
-        panel.setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
-        
-        panel.add(crearTarjetaPruebaMejorada(
-            "📈 PRUEBA DE MEDIA",
-            "Verifica si la media está dentro del intervalo de confianza",
-            COLOR_PRIMARIO,
-            new String[]{"Media calculada:", "Límite inferior:", "Límite superior:", "Decisión:"}
-        ));
-        
-        panel.add(crearTarjetaPruebaMejorada(
-            "📊 PRUEBA DE VARIANZA",
-            "Evalúa la varianza de la distribución uniforme",
-            COLOR_EXITO,
-            new String[]{"Varianza calculada:", "Límite inferior:", "Límite superior:", "Decisión:"}
-        ));
-        
-        panel.add(crearTarjetaPruebaMejorada(
-            "📐 PRUEBA DE FORMA",
-            "Prueba de bondad de ajuste a distribución uniforme",
-            COLOR_NARANJA,
-            new String[]{"Chi² calculado:", "Chi² crítico:", "Grados libertad:", "Decisión:"}
-        ));
-        
-        return panel;
-    }
-    
-    private JPanel crearPanelPruebasAvanzadas() {
-        JPanel panel = new JPanel(new GridLayout(3, 1, 20, 20));
-        panel.setBackground(COLOR_FONDO);
-        panel.setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
-        
-        panel.add(crearTarjetaPruebaMejorada(
-            "🎲 PRUEBA DE POKER",
-            "Prueba de independencia basada en dígitos",
-            new Color(180, 100, 255),
-            new String[]{"Chi² calculado:", "Chi² crítico:", "Manos diferentes:", "Decisión:"}
-        ));
-        
-        panel.add(crearTarjetaPruebaMejorada(
-            "📈 PRUEBA DE CORRIDAS",
-            "Prueba de aleatoriedad en secuencias",
-            new Color(255, 140, 100),
-            new String[]{"Corridas totales:", "Esperadas:", "Estadístico Z:", "Decisión:"}
-        ));
-        
-        panel.add(crearTarjetaPruebaMejorada(
-            "🔢 PRUEBA DE SERIES",
-            "Prueba de independencia en pares consecutivos",
-            new Color(100, 200, 255),
-            new String[]{"Chi² calculado:", "Chi² crítico:", "Pares analizados:", "Decisión:"}
-        ));
-        
-        return panel;
-    }
-    
-    private JPanel crearTarjetaPruebaMejorada(String titulo, String descripcion, 
-                                            Color color, String[] labels) {
-        JPanel tarjeta = new JPanel(new BorderLayout(15, 15));
-        tarjeta.setBackground(COLOR_CARD);
-        tarjeta.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(color, 2),
-            BorderFactory.createEmptyBorder(25, 25, 25, 25)
-        ));
-        
-        // Encabezado con color
-        JPanel header = new JPanel(new BorderLayout(10, 10));
-        header.setBackground(COLOR_CARD);
-        
-        JLabel lblTitulo = new JLabel(titulo);
-        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 18));  // Tamaño aumentado
-        lblTitulo.setForeground(color);
-        
-        JLabel lblDesc = new JLabel(descripcion);
-        lblDesc.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        lblDesc.setForeground(COLOR_TEXTO_SECUNDARIO);
-        
-        header.add(lblTitulo, BorderLayout.NORTH);
-        header.add(lblDesc, BorderLayout.SOUTH);
-        
-        // Resultados en grid
-        JPanel resultados = new JPanel(new GridLayout(4, 2, 15, 15));
-        resultados.setBackground(COLOR_CARD);
-        resultados.setBorder(BorderFactory.createEmptyBorder(20, 0, 0, 0));
-        
-        for (String label : labels) {
-            resultados.add(crearEtiquetaMejorada(label));
-            resultados.add(crearEtiquetaResultadoMejorada("--"));
-        }
-        
-        tarjeta.add(header, BorderLayout.NORTH);
-        tarjeta.add(resultados, BorderLayout.CENTER);
-        
-        return tarjeta;
-    }
-    
-    private JLabel crearEtiquetaMejorada(String texto) {
-        JLabel label = new JLabel(texto);
-        label.setForeground(COLOR_TEXTO);
-        label.setFont(new Font("Segoe UI", Font.BOLD, 14));  // Negrita
-        return label;
-    }
-    
-    private JLabel crearEtiquetaResultadoMejorada(String texto) {
-        JLabel label = new JLabel(texto);
-        label.setForeground(Color.WHITE);
-        label.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        label.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(60, 60, 60), 1),
+        cbMetodo = new JComboBox<>(new String[]{"Congruencial Mixto", "Cuadrados Medios"});
+        cbMetodo.setFont(new Font("Inter", Font.PLAIN, 14));
+        cbMetodo.setBackground(COLOR_CARD);
+        cbMetodo.setForeground(COLOR_NEGRO);
+        cbMetodo.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(COLOR_BORDE, 1),
             BorderFactory.createEmptyBorder(8, 12, 8, 12)
         ));
-        label.setBackground(new Color(45, 45, 48));
-        label.setOpaque(true);
-        return label;
+        cbMetodo.addActionListener(e -> actualizarPanelParametros());
+        
+        // Selector de nivel de confianza
+        JLabel lblConfianza = new JLabel("Nivel de Confianza:");
+        lblConfianza.setFont(new Font("Inter", Font.BOLD, 14));
+        lblConfianza.setForeground(COLOR_TEXTO);
+        
+        cbConfianza = new JComboBox<>(new String[]{
+            "99% (α=0.01)", 
+            "95% (α=0.05)", 
+            "90% (α=0.10)", 
+            "85% (α=0.15)", 
+            "80% (α=0.20)"
+        });
+        cbConfianza.setSelectedIndex(1); // 95% por defecto
+        cbConfianza.setFont(new Font("Inter", Font.PLAIN, 14));
+        cbConfianza.setBackground(COLOR_CARD);
+        cbConfianza.setForeground(COLOR_NEGRO);
+        cbConfianza.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(COLOR_BORDE, 1),
+            BorderFactory.createEmptyBorder(8, 12, 8, 12)
+        ));
+        
+        panelSelectores.add(lblMetodo);
+        panelSelectores.add(cbMetodo);
+        panelSelectores.add(Box.createRigidArea(new Dimension(30, 0)));
+        panelSelectores.add(lblConfianza);
+        panelSelectores.add(cbConfianza);
+        
+        JPanel panelTitulos = new JPanel();
+        panelTitulos.setLayout(new BoxLayout(panelTitulos, BoxLayout.Y_AXIS));
+        panelTitulos.setBackground(COLOR_FONDO);
+        panelTitulos.add(titulo);
+        panelTitulos.add(Box.createRigidArea(new Dimension(0, 5)));
+        panelTitulos.add(subtitulo);
+        
+        panel.add(panelTitulos, BorderLayout.WEST);
+        panel.add(panelSelectores, BorderLayout.EAST);
+        
+        return panel;
     }
     
-    private JButton crearBotonGrande(String texto, Color color) {
-        JButton boton = new JButton(texto) {
+    private JPanel crearPanelCentral() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(COLOR_FONDO);
+        
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.insets = new Insets(0, 0, 0, 20); // Espacio entre paneles
+        
+        // Panel izquierdo: Parámetros (20% del ancho)
+        gbc.weightx = 0.15;
+        gbc.weighty = 1.0;
+        gbc.gridx = 0;
+        panel.add(crearCardParametros(), gbc);
+        
+        // Panel central: Números (35% del ancho)
+        gbc.weightx = 0.30;
+        gbc.gridx = 1;
+        panel.add(crearCardNumeros(), gbc);
+        
+        // Panel derecho: Resultados/Pruebas (55% del ancho - el más ancho)
+        gbc.weightx = 0.55;
+        gbc.insets = new Insets(0, 0, 0, 0); // Sin espacio al final
+        gbc.gridx = 2;
+        panel.add(crearCardResultados(), gbc);
+        
+        return panel;
+    }
+    
+    private JPanel crearCardParametros() {
+        JPanel card = crearCard("Parámetros de Generación");
+        card.setLayout(new BorderLayout(0, 15));
+        
+        panelParametros = new JPanel();
+        panelParametros.setLayout(new BoxLayout(panelParametros, BoxLayout.Y_AXIS));
+        panelParametros.setBackground(COLOR_CARD);
+        
+        actualizarPanelParametros();
+        
+        JScrollPane scroll = new JScrollPane(panelParametros);
+        scroll.setBorder(null);
+        scroll.getViewport().setBackground(COLOR_CARD);
+        scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        
+        card.add(scroll, BorderLayout.CENTER);
+        
+        return card;
+    }
+    
+    private JPanel crearCardNumeros() {
+        JPanel card = crearCard("Números Generados - 2 Conjuntos");
+        card.setLayout(new BorderLayout(0, 15));
+        
+        // Crear un tabbed pane para mostrar los 2 conjuntos
+        tabbedPaneNumeros = new JTabbedPane();
+        tabbedPaneNumeros.setFont(new Font("Inter", Font.BOLD, 13));
+        tabbedPaneNumeros.setBackground(COLOR_CARD);
+        tabbedPaneNumeros.setForeground(COLOR_NEGRO);
+        
+        // Panel para conjunto 1
+        JPanel panelConjunto1 = new JPanel(new BorderLayout());
+        panelConjunto1.setBackground(COLOR_NEGRO);
+        
+        JLabel lblConjunto1 = new JLabel("Conjunto 1 (Entradas)");
+        lblConjunto1.setFont(new Font("Inter", Font.BOLD, 12));
+        lblConjunto1.setForeground(COLOR_TEXTO);
+        lblConjunto1.setBorder(BorderFactory.createEmptyBorder(0, 0, 5, 0));
+        
+        tablaNumeros1 = crearTablaNumeros();
+        JScrollPane scroll1 = new JScrollPane(tablaNumeros1);
+        scroll1.setBorder(BorderFactory.createLineBorder(COLOR_BORDE, 1));
+        scroll1.getViewport().setBackground(COLOR_CARD);
+        scroll1.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        
+        panelConjunto1.add(lblConjunto1, BorderLayout.NORTH);
+        panelConjunto1.add(scroll1, BorderLayout.CENTER);
+        
+        // Panel para conjunto 2
+        JPanel panelConjunto2 = new JPanel(new BorderLayout());
+        panelConjunto2.setBackground(COLOR_CARD);
+        
+        JLabel lblConjunto2 = new JLabel("Conjunto 2 (Salidas)");
+        lblConjunto2.setFont(new Font("Inter", Font.BOLD, 12));
+        lblConjunto2.setForeground(COLOR_TEXTO);
+        lblConjunto2.setBorder(BorderFactory.createEmptyBorder(0, 0, 5, 0));
+        
+        tablaNumeros2 = crearTablaNumeros();
+        JScrollPane scroll2 = new JScrollPane(tablaNumeros2);
+        scroll2.setBorder(BorderFactory.createLineBorder(COLOR_BORDE, 1));
+        scroll2.getViewport().setBackground(COLOR_CARD);
+        scroll2.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        
+        panelConjunto2.add(lblConjunto2, BorderLayout.NORTH);
+        panelConjunto2.add(scroll2, BorderLayout.CENTER);
+        
+        tabbedPaneNumeros.addTab("Conjunto 1", panelConjunto1);
+        tabbedPaneNumeros.addTab("Conjunto 2", panelConjunto2);
+        
+        card.add(tabbedPaneNumeros, BorderLayout.CENTER);
+        
+        return card;
+    }
+    
+    private JTable crearTablaNumeros() {
+        String[] columnas = {"#", "Valor"};
+        DefaultTableModel modelo = new DefaultTableModel(columnas, 0) {
             @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                
-                // Gradiente más pronunciado
-                GradientPaint gradient;
-                if (getModel().isPressed()) {
-                    gradient = new GradientPaint(
-                        0, 0, color.darker().darker(),
-                        getWidth(), getHeight(), color.darker()
-                    );
-                } else if (getModel().isRollover()) {
-                    gradient = new GradientPaint(
-                        0, 0, color.brighter().brighter(),
-                        getWidth(), getHeight(), color.brighter()
-                    );
-                } else {
-                    gradient = new GradientPaint(
-                        0, 0, color.brighter(),
-                        getWidth(), getHeight(), color
-                    );
-                }
-                
-                g2.setPaint(gradient);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 25, 25);
-                
-                // Borde brillante
-                g2.setColor(color.brighter().brighter());
-                g2.setStroke(new BasicStroke(2));
-                g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3, 25, 25);
-                
-                // Sombra exterior
-                g2.setColor(new Color(0, 0, 0, 80));
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 25, 25);
-                
-                g2.dispose();
-                
-                super.paintComponent(g);
-            }
+            public boolean isCellEditable(int row, int column) { return false; }
         };
         
-        boton.setFont(new Font("Segoe UI", Font.BOLD, 16));  // Tamaño aumentado
-        boton.setForeground(Color.WHITE);
-        boton.setContentAreaFilled(false);
-        boton.setBorderPainted(false);
-        boton.setFocusPainted(false);
-        boton.setBorder(BorderFactory.createEmptyBorder(15, 30, 15, 30));  // Más padding
-        boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        JTable tabla = new JTable(modelo);
+        estilizarTabla(tabla);
+        tabla.getColumnModel().getColumn(0).setPreferredWidth(60);
+        tabla.getColumnModel().getColumn(0).setMaxWidth(80);
         
-        // Efecto de elevación
-        boton.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseEntered(java.awt.event.MouseEvent e) {
-                boton.setBorder(BorderFactory.createEmptyBorder(12, 27, 18, 33));
-            }
-            
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent e) {
-                boton.setBorder(BorderFactory.createEmptyBorder(15, 30, 15, 30));
-            }
-        });
-        
-        return boton;
+        return tabla;
     }
     
-    private JButton crearBotonConIcono(String texto, Color color) {
-        JButton boton = new JButton(texto) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                
-                // Fondo del botón
-                if (getModel().isPressed()) {
-                    g2.setColor(color.darker());
-                } else if (getModel().isRollover()) {
-                    g2.setColor(color.brighter());
-                } else {
-                    g2.setColor(color);
-                }
-                
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
-                g2.dispose();
-                
-                super.paintComponent(g);
-            }
-        };
+    private JPanel crearCardResultados() {
+        JPanel card = crearCard("Análisis Estadístico");
+        card.setLayout(new BorderLayout(0, 15));
         
-        boton.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        boton.setForeground(Color.WHITE);
-        boton.setContentAreaFilled(false);
-        boton.setBorderPainted(false);
-        boton.setFocusPainted(false);
-        boton.setBorder(BorderFactory.createEmptyBorder(12, 25, 12, 25));
-        boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        // Indicador de nivel de confianza actual
+        JPanel panelInfoConfianza = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        panelInfoConfianza.setBackground(COLOR_CARD);
+        panelInfoConfianza.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
         
-        return boton;
+        JLabel lblInfoConfianza = new JLabel("Nivel de Confianza Actual: ");
+        lblInfoConfianza.setFont(new Font("Inter", Font.BOLD, 12));
+        lblInfoConfianza.setForeground(COLOR_TEXTO_SECUNDARIO);
+        
+        JLabel lblValorConfianza = new JLabel("95%");
+        lblValorConfianza.setFont(new Font("Inter", Font.BOLD, 12));
+        lblValorConfianza.setForeground(COLOR_PRIMARIO);
+        
+        panelInfoConfianza.add(lblInfoConfianza);
+        panelInfoConfianza.add(lblValorConfianza);
+        
+        // Panel de pruebas - COMO ESTABA ORIGINALMENTE
+        panelPruebas = new JPanel();
+        panelPruebas.setLayout(new BoxLayout(panelPruebas, BoxLayout.Y_AXIS));
+        panelPruebas.setBackground(COLOR_CARD);
+        
+        scrollPruebas = new JScrollPane(panelPruebas);
+        scrollPruebas.setBorder(BorderFactory.createLineBorder(COLOR_BORDE, 1));
+        scrollPruebas.getViewport().setBackground(COLOR_CARD);
+        scrollPruebas.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS); // SCROLL SIEMPRE VISIBLE
+        scrollPruebas.getVerticalScrollBar().setUnitIncrement(16);
+        
+        JPanel panelContenedor = new JPanel(new BorderLayout());
+        panelContenedor.setBackground(COLOR_CARD);
+        panelContenedor.add(panelInfoConfianza, BorderLayout.NORTH);
+        panelContenedor.add(scrollPruebas, BorderLayout.CENTER);
+        
+        card.add(panelContenedor, BorderLayout.CENTER);
+        
+        return card;
     }
     
-    private void estilizarCampoTextoMejorado(JTextField campo) {
-        campo.setBackground(new Color(45, 45, 48));
-        campo.setForeground(COLOR_TEXTO);
-        campo.setCaretColor(COLOR_TEXTO);
-        campo.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(80, 80, 80), 2),
-            BorderFactory.createEmptyBorder(12, 15, 12, 15)
+    private JPanel crearCard(String titulo) {
+        JPanel card = new JPanel(new BorderLayout(0, 15));
+        card.setBackground(COLOR_CARD);
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(COLOR_BORDE, 1),
+            BorderFactory.createEmptyBorder(20, 20, 20, 20)
         ));
-        campo.setFont(new Font("Segoe UI", Font.BOLD, 14));  // Negrita
-        campo.setSelectionColor(COLOR_PRIMARIO);
-        campo.setSelectedTextColor(Color.WHITE);
+        
+        JLabel lblTitulo = new JLabel(titulo);
+        lblTitulo.setFont(new Font("Inter", Font.BOLD, 16));
+        lblTitulo.setForeground(COLOR_TEXTO);
+        
+        card.add(lblTitulo, BorderLayout.NORTH);
+        
+        return card;
     }
     
-    private void estilizarComboBoxMejorado(JComboBox<?> combo) {
-        combo.setBackground(new Color(45, 45, 48));
-        combo.setForeground(COLOR_TEXTO);
-        combo.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(80, 80, 80), 2),
-            BorderFactory.createEmptyBorder(10, 15, 10, 15)
-        ));
-        combo.setFont(new Font("Segoe UI", Font.BOLD, 14));  // Negrita
-        combo.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value,
-                    int index, boolean isSelected, boolean cellHasFocus) {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                setBackground(isSelected ? COLOR_PRIMARIO : new Color(45, 45, 48));
-                setForeground(isSelected ? Color.WHITE : COLOR_TEXTO);
-                setFont(new Font("Segoe UI", Font.BOLD, 13));
-                return this;
-            }
-        });
-    }
-    
-    private void estilizarTablaMejorada(JTable tabla) {
-        tabla.setRowHeight(40);
+    private void estilizarTabla(JTable tabla) {
+        tabla.setFont(new Font("Inter", Font.PLAIN, 13));
         tabla.setBackground(COLOR_CARD);
         tabla.setForeground(COLOR_TEXTO);
-        tabla.setGridColor(new Color(70, 70, 70));
-        tabla.setFont(new Font("Segoe UI", Font.BOLD, 13));  // Negrita
-        tabla.setShowGrid(true);
+        tabla.setGridColor(COLOR_BORDE);
+        tabla.setRowHeight(32);
+        tabla.setShowVerticalLines(true);
+        tabla.setShowHorizontalLines(true);
         tabla.setIntercellSpacing(new Dimension(1, 1));
         
-        tabla.getTableHeader().setBackground(new Color(50, 50, 55));
-        tabla.getTableHeader().setForeground(COLOR_TEXTO);
-        tabla.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));  // Negrita
-        tabla.getTableHeader().setBorder(BorderFactory.createLineBorder(new Color(70, 70, 70)));
-        tabla.getTableHeader().setReorderingAllowed(false);
+        tabla.getTableHeader().setFont(new Font("Inter", Font.BOLD, 13));
+        tabla.getTableHeader().setBackground(COLOR_HOVER);
+        tabla.getTableHeader().setForeground(COLOR_NEGRO);
+        tabla.getTableHeader().setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, COLOR_BORDE));
         
-        tabla.setDefaultRenderer(Object.class, new javax.swing.table.DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable table, Object value,
-                    boolean isSelected, boolean hasFocus, int row, int column) {
-                Component c = super.getTableCellRendererComponent(table, value, 
-                    isSelected, hasFocus, row, column);
-                
-                if (isSelected) {
-                    c.setBackground(COLOR_PRIMARIO);
-                    c.setForeground(Color.WHITE);
-                } else {
-                    if (row % 2 == 0) {
-                        c.setBackground(COLOR_CARD);
-                    } else {
-                        c.setBackground(new Color(40, 40, 45));
-                    }
-                    c.setForeground(COLOR_TEXTO);
-                }
-                
-                setBorder(BorderFactory.createEmptyBorder(0, 15, 0, 15));
-                setHorizontalAlignment(SwingConstants.CENTER);
-                setFont(new Font("Segoe UI", Font.PLAIN, 13));
-                return c;
-            }
-        });
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+        centerRenderer.setHorizontalAlignment(JLabel.CENTER);
+        for (int i = 0; i < tabla.getColumnCount(); i++) {
+            tabla.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
+        }
     }
     
-    private void configurarAcciones() {
+    private void actualizarPanelParametros() {
+        panelParametros.removeAll();
+        panelParametros.add(Box.createRigidArea(new Dimension(0, 10)));
+        
+        // Siempre agregar el campo N primero
+        txtN.setText("100");
+        agregarCampoExistente(txtN, "Cantidad de números por conjunto (N)", 
+            "Cantidad de valores pseudoaleatorios a generar en CADA conjunto");
+        
+        
+        if (cbMetodo.getSelectedIndex() == 0) {
+            // Congruencial Mixto (CON PARÁMETROS QUE FUNCIONAN CON TU MÉTODO)
+            txtX0.setText("7");
+            txtA.setText("5");
+            txtC.setText("3");
+            txtM.setText("16");
+            
+            agregarCampoExistente(txtX0, "Semilla Base (X₀)", "Valor inicial base (cada conjunto tendrá semilla diferente)");
+            agregarCampoExistente(txtA, "Multiplicador (a)", "Constante multiplicativa (debe ser < m)");
+            agregarCampoExistente(txtC, "Incremento (c)", "Constante aditiva (debe ser < m)");
+            agregarCampoExistente(txtM, "Módulo (m)", "Valor máximo del módulo (ej: 16, 128, 256)");
+            
+            // Ocultar campo semilla del método de cuadrados medios
+            txtSemilla.setVisible(false);
+        } else {
+            // Cuadrados Medios (CON PARÁMETROS QUE FUNCIONAN CON TU MÉTODO)
+            txtSemilla.setText("12345");
+            agregarCampoExistente(txtSemilla, "Semilla Base", 
+                "Número de al menos 3 dígitos (cada conjunto tendrá semilla diferente)");
+            
+            // Ocultar campos del método mixto
+            txtX0.setVisible(false);
+            txtA.setVisible(false);
+            txtC.setVisible(false);
+            txtM.setVisible(false);
+        }
+        
+        panelParametros.add(Box.createRigidArea(new Dimension(0, 10)));
+        panelParametros.revalidate();
+        panelParametros.repaint();
+    }
+    
+    private void agregarCampoExistente(JTextField txt, String label, String tooltip) {
+        JPanel panelCampo = new JPanel(new BorderLayout(0, 8));
+        panelCampo.setBackground(COLOR_CARD);
+        panelCampo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 75));
+        panelCampo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        JLabel lbl = new JLabel(label);
+        lbl.setFont(new Font("Inter", Font.BOLD, 13));
+        lbl.setForeground(COLOR_TEXTO);
+        
+        txt.setFont(new Font("Inter", Font.PLAIN, 14));
+        txt.setBackground(COLOR_HOVER);
+        txt.setForeground(COLOR_TEXTO);
+        txt.setCaretColor(COLOR_TEXTO);
+        txt.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(COLOR_BORDE, 1),
+            BorderFactory.createEmptyBorder(10, 12, 10, 12)
+        ));
+        txt.setToolTipText(tooltip);
+        txt.setVisible(true);
+        
+        panelCampo.add(lbl, BorderLayout.NORTH);
+        panelCampo.add(txt, BorderLayout.CENTER);
+        
+        panelParametros.add(panelCampo);
+        panelParametros.add(Box.createRigidArea(new Dimension(0, 10)));
+    }
+    
+    private JPanel crearPanelInferior() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
+        panel.setBackground(COLOR_FONDO);
+        
+        JButton btnGenerar = crearBoton("Generar 2 Conjuntos", COLOR_PRIMARIO, true);
         btnGenerar.addActionListener(e -> generarNumeros());
-        btnEjecutarPruebas.addActionListener(e -> ejecutarTodasLasPruebas());
+        
+        JButton btnPruebas1 = crearBoton("Pruebas Conjunto 1", COLOR_CONJUNTO1, false);
+        btnPruebas1.addActionListener(e -> {
+            conjuntoPruebasActual = 0;
+            ejecutarPruebas(0);
+        });
+        
+        JButton btnPruebas2 = crearBoton("Pruebas Conjunto 2", COLOR_CONJUNTO2, false);
+        btnPruebas2.addActionListener(e -> {
+            conjuntoPruebasActual = 1;
+            ejecutarPruebas(1);
+        });
+        
+        JButton btnPruebasAmbos = crearBoton("Pruebas Ambos", COLOR_EXITO, false);
+        btnPruebasAmbos.addActionListener(e -> ejecutarPruebasAmbos());
+        
+        JButton btnLimpiar = crearBoton("Limpiar", COLOR_ERROR, false);
+        btnLimpiar.addActionListener(e -> limpiar());
+        
+        JButton btnVolver = crearBoton("Volver al Menú", COLOR_TEXTO_SECUNDARIO, false);
+        btnVolver.addActionListener(e -> {
+            new MenuPrincipal().setVisible(true);
+            dispose();
+        });
+        
+        panel.add(btnGenerar);
+        panel.add(btnPruebas1);
+        panel.add(btnPruebas2);
+        panel.add(btnPruebasAmbos);
+        panel.add(btnLimpiar);
+        panel.add(btnVolver);
+        
+        return panel;
+    }
+    
+    private JButton crearBoton(String texto, Color color, boolean esPrimario) {
+        JButton boton = new JButton(texto) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                Color bgColor = color;
+                if (getModel().isPressed()) {
+                    bgColor = color.darker();
+                } else if (getModel().isRollover()) {
+                    bgColor = esPrimario ? color.brighter() : COLOR_HOVER;
+                }
+                
+                if (esPrimario) {
+                    g2.setColor(bgColor);
+                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                } else {
+                    g2.setColor(COLOR_HOVER);
+                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                    g2.setColor(color);
+                    g2.setStroke(new BasicStroke(1.5f));
+                    g2.drawRoundRect(1, 1, getWidth()-2, getHeight()-2, 8, 8);
+                }
+                
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        
+        boton.setFont(new Font("Inter", Font.BOLD, 13));
+        boton.setForeground(esPrimario ? Color.WHITE : color);
+        boton.setContentAreaFilled(false);
+        boton.setBorderPainted(false);
+        boton.setFocusPainted(false);
+        boton.setBorder(BorderFactory.createEmptyBorder(12, 24, 12, 24));
+        boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        return boton;
     }
     
     private void generarNumeros() {
         try {
-            int n = Integer.parseInt(txtN.getText().trim());
-            int x = Integer.parseInt(txtX0.getText().trim());
-            int a = Integer.parseInt(txtA.getText().trim());
-            int c = Integer.parseInt(txtC.getText().trim());
-            int m = Integer.parseInt(txtM.getText().trim());
+            int n = Integer.parseInt(txtN.getText());
             
-            if (n <= 0 || m <= 1) {
-                mostrarError("❌ Verifica valores del generador (n>0, m>1).");
+            if (n <= 0 || n > 5000) {
+                mostrarError("La cantidad debe estar entre 1 y 5,000 por conjunto");
                 return;
             }
             
-            numeros.clear();
-            modeloGenerados.setRowCount(0);
-            
-            GeneradorNumeros generador = GeneradorNumeros.getInstance();
-            generador.setParametros(n, x, a, c, m);
-            
-            int currentX = x;
-            for (int i = 1; i <= n; i++) {
-                int raw = a * currentX + c;
-                int entero = raw / m;
-                int residuo = raw - (m * entero);
-                residuo = ((residuo % m) + m) % m;
+            if (cbMetodo.getSelectedIndex() == 0) {
+                // Congruencial Mixto - TU MÉTODO
+                int x0 = Integer.parseInt(txtX0.getText());
+                int a = Integer.parseInt(txtA.getText());
+                int c = Integer.parseInt(txtC.getText());
+                int m = Integer.parseInt(txtM.getText());
                 
-                double pseudo = (double) residuo / (double) (m - 1);
+                // Validación básica para tu método
+                if (x0 < 0 || x0 >= m) {
+                    mostrarError("X₀ debe estar en el rango [0, m-1]");
+                    return;
+                }
+                if (a <= 0 || a >= m) {
+                    mostrarError("a debe estar en el rango (0, m)");
+                    return;
+                }
+                if (c < 0 || c >= m) {
+                    mostrarError("c debe estar en el rango [0, m-1]");
+                    return;
+                }
+                if (m <= 0) {
+                    mostrarError("m debe ser > 0");
+                    return;
+                }
                 
-                numeros.add(pseudo);
-                modeloGenerados.addRow(new Object[] { 
-                    String.format("%03d", i), 
-                    String.format("%.6f", pseudo) 
-                });
-                currentX = residuo;
+                // Usar la validación original o una simplificada
+                String validacion = validarParametrosMixtoSencillo(m, a, c, x0);
+                if (!validacion.equals("OK")) {
+                    mostrarError("Parámetros inválidos:\n" + validacion);
+                    return;
+                }
+                
+                // Generar 2 conjuntos
+                numerosGenerados = GeneradorPseudoaleatorios.generarCongruencialMixto(n, x0, a, c, m, 2);
+                
+            } else {
+                // Cuadrados Medios - TU MÉTODO
+                int semilla = Integer.parseInt(txtSemilla.getText());
+                
+                // Validación básica para tu método
+                if (semilla <= 0) {
+                    mostrarError("La semilla debe ser > 0");
+                    return;
+                }
+                
+                int numDigitos = String.valueOf(semilla).length();
+                if (numDigitos < 3) {
+                    mostrarError("La semilla debe tener al menos 3 dígitos");
+                    return;
+                }
+                
+                // Verificar desbordamiento
+                long cuadrado = (long) semilla * (long) semilla;
+                if (cuadrado < 0) {
+                    mostrarError("Semilla demasiado grande, puede causar desbordamiento");
+                    return;
+                }
+                
+                // Generar 2 conjuntos
+                numerosGenerados = GeneradorPseudoaleatorios.generarCuadradosMedios(n, semilla, 2);
             }
             
-            generador.setNumeros(new ArrayList<>(numeros));
+            // --- MODIFICACIÓN: GUARDAR EN SINGLETON ---
+            if (numerosGenerados != null) {
+                SimulacionDatos.getInstancia().setDatosGenerados(
+                    numerosGenerados[0],
+                    numerosGenerados[1],
+                    n
+                );
+            }
+            // ----------------------------------------
             
-            mostrarExito(String.format("✅ Se generaron %d números pseudoaleatorios.", n));
+            // Actualizar ambas tablas
+            actualizarTablaNumeros(0, tablaNumeros1);
+            actualizarTablaNumeros(1, tablaNumeros2);
+            
+            mostrarExito("Se generaron 2 conjuntos de " + n + " números cada uno correctamente\n" +
+                        "• Conjunto 1: Para datos de entrada\n" +
+                        "• Conjunto 2: Para datos de salida\n" +
+                        "• ¡Datos guardados en memoria para las siguientes etapas!");
             
         } catch (NumberFormatException ex) {
-            mostrarError("❌ Verifica que todos los parámetros sean números válidos.");
+            mostrarError("Todos los campos deben contener números válidos");
+            ex.printStackTrace();
+        } catch (IllegalArgumentException ex) {
+            mostrarError("Error en la generación: " + ex.getMessage());
+            ex.printStackTrace();
+        } catch (Exception ex) {
+            mostrarError("Error inesperado: " + ex.getMessage());
+            ex.printStackTrace();
         }
     }
     
-    private void ejecutarTodasLasPruebas() {
-        if (numeros.isEmpty()) {
-            mostrarError("⚠️ Primero genera los números pseudoaleatorios.");
+    /**
+     * Validación simplificada para tu método congruencial
+     */
+    private String validarParametrosMixtoSencillo(int m, int a, int c, int x0) {
+        // Validaciones básicas
+        if (m <= 0) return "m debe ser > 0";
+        if (a <= 0) return "a debe ser > 0";
+        if (c < 0) return "c debe ser ≥ 0";
+        if (x0 < 0) return "X₀ debe ser ≥ 0";
+        if (x0 >= m) return "X₀ debe ser < m";
+        if (c >= m) return "c debe ser < m";
+        if (a >= m) return "a debe ser < m";
+        
+        // Para tu método, podemos usar validaciones más tolerantes
+        // Solo verificar que sean números válidos
+        return "OK";
+    }
+    
+    private void actualizarTablaNumeros(int conjunto, JTable tabla) {
+        DefaultTableModel modelo = (DefaultTableModel) tabla.getModel();
+        modelo.setRowCount(0);
+        
+        if (numerosGenerados != null && numerosGenerados[conjunto] != null) {
+            for (int i = 0; i < numerosGenerados[conjunto].size(); i++) {
+                modelo.addRow(new Object[]{i + 1, String.format("%.5f", numerosGenerados[conjunto].get(i))});
+            }
+        }
+    }
+    
+    private void ejecutarPruebas(int conjunto) {
+        if (numerosGenerados == null || numerosGenerados[conjunto] == null || numerosGenerados[conjunto].isEmpty()) {
+            mostrarError("Primero debes generar números para el conjunto " + (conjunto + 1));
             return;
         }
         
-        panelPruebas.setSelectedIndex(1);
-        mostrarExito("✅ Ejecutando todas las pruebas estadísticas...");
+        // Obtener nivel de confianza seleccionado
+        nivelConfianza = obtenerNivelConfianzaSeleccionado();
         
-        // Aquí iría el código de ejecución de pruebas
+        // Actualizar información de nivel de confianza
+        actualizarInfoConfianza();
+        
+        // Ejecutar pruebas y almacenar resultados
+        if (conjunto == 0) {
+            resultadosPruebasConjunto1[0] = EstadisticasCalculador.pruebaMedia(numerosGenerados[conjunto], nivelConfianza);
+            resultadosPruebasConjunto1[1] = EstadisticasCalculador.pruebaVarianza(numerosGenerados[conjunto], nivelConfianza);
+            resultadosPruebasConjunto1[2] = EstadisticasCalculador.pruebaUniformidad(numerosGenerados[conjunto], 5, nivelConfianza);
+            resultadosPruebasConjunto1[3] = EstadisticasCalculador.pruebaCorridas(numerosGenerados[conjunto], nivelConfianza);
+            resultadosPruebasConjunto1[4] = EstadisticasCalculador.pruebaSeries(numerosGenerados[conjunto], nivelConfianza);
+            resultadosPruebasConjunto1[5] = EstadisticasCalculador.pruebaPoker(numerosGenerados[conjunto], nivelConfianza);
+        } else {
+            resultadosPruebasConjunto2[0] = EstadisticasCalculador.pruebaMedia(numerosGenerados[conjunto], nivelConfianza);
+            resultadosPruebasConjunto2[1] = EstadisticasCalculador.pruebaVarianza(numerosGenerados[conjunto], nivelConfianza);
+            resultadosPruebasConjunto2[2] = EstadisticasCalculador.pruebaUniformidad(numerosGenerados[conjunto], 5, nivelConfianza);
+            resultadosPruebasConjunto2[3] = EstadisticasCalculador.pruebaCorridas(numerosGenerados[conjunto], nivelConfianza);
+            resultadosPruebasConjunto2[4] = EstadisticasCalculador.pruebaSeries(numerosGenerados[conjunto], nivelConfianza);
+            resultadosPruebasConjunto2[5] = EstadisticasCalculador.pruebaPoker(numerosGenerados[conjunto], nivelConfianza);
+        }
+        
+        // Mostrar pruebas del conjunto seleccionado
+        mostrarPruebasConjunto(conjunto);
+        
+        mostrarExito("Pruebas ejecutadas correctamente para el Conjunto " + (conjunto + 1) + 
+                     " con nivel de confianza " + String.format("%.1f%%", nivelConfianza * 100));
     }
     
-    private void mostrarExito(String mensaje) {
-        JOptionPane.showMessageDialog(this, 
-            "<html><div style='font-family: Segoe UI; font-size: 14px; color: #64c864; padding: 10px;'>" +
-            mensaje + "</div></html>",
-            "Éxito", JOptionPane.INFORMATION_MESSAGE);
+    private void ejecutarPruebasAmbos() {
+        if (numerosGenerados == null || numerosGenerados[0] == null || numerosGenerados[0].isEmpty() ||
+            numerosGenerados[1] == null || numerosGenerados[1].isEmpty()) {
+            mostrarError("Primero debes generar números para ambos conjuntos");
+            return;
+        }
+        
+        // Obtener nivel de confianza seleccionado
+        nivelConfianza = obtenerNivelConfianzaSeleccionado();
+        
+        // Ejecutar pruebas para ambos conjuntos
+        ejecutarPruebas(0);
+        ejecutarPruebas(1);
+        
+        mostrarExito("Pruebas ejecutadas correctamente para AMBOS conjuntos con nivel de confianza " + 
+                     String.format("%.1f%%", nivelConfianza * 100));
+    }
+    
+    private void mostrarPruebasConjunto(int conjunto) {
+        panelPruebas.removeAll();
+        panelPruebas.add(Box.createRigidArea(new Dimension(0, 10)));
+        
+        // Obtener resultados del conjunto seleccionado
+        EstadisticasCalculador.ResultadoPrueba[] resultados;
+        Color colorConjunto;
+        
+        if (conjunto == 0) {
+            resultados = resultadosPruebasConjunto1;
+            colorConjunto = COLOR_CONJUNTO1;
+        } else {
+            resultados = resultadosPruebasConjunto2;
+            colorConjunto = COLOR_CONJUNTO2;
+        }
+        
+        // Verificar si hay resultados
+        if (resultados == null || resultados[0] == null) {
+            JLabel lblNoPruebas = new JLabel("No hay pruebas ejecutadas para este conjunto");
+            lblNoPruebas.setFont(new Font("Inter", Font.BOLD, 14));
+            lblNoPruebas.setForeground(colorConjunto);
+            lblNoPruebas.setHorizontalAlignment(SwingConstants.CENTER);
+            panelPruebas.add(lblNoPruebas);
+        } else {
+            // Agregar cada prueba - EXACTAMENTE COMO ESTABA ORIGINALMENTE
+            String[] nombresPruebas = {"Media", "Varianza", "Uniformidad (Chi-Cuadrado)", 
+                                      "Corridas (Independencia)", "Series", "Poker"};
+            
+            for (int i = 0; i < resultados.length; i++) {
+                if (resultados[i] != null) {
+                    agregarPruebaConGrafica(nombresPruebas[i], resultados[i], colorConjunto);
+                }
+            }
+        }
+        
+        panelPruebas.add(Box.createRigidArea(new Dimension(0, 10)));
+        panelPruebas.revalidate();
+        panelPruebas.repaint();
+        
+        // Asegurar que el scroll esté visible
+        scrollPruebas.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+    }
+    
+    private double obtenerNivelConfianzaSeleccionado() {
+        String seleccionado = (String) cbConfianza.getSelectedItem();
+        if (seleccionado.contains("99%")) return 0.99;
+        if (seleccionado.contains("95%")) return 0.95;
+        if (seleccionado.contains("90%")) return 0.90;
+        if (seleccionado.contains("85%")) return 0.85;
+        if (seleccionado.contains("80%")) return 0.80;
+        return 0.95; // Valor por defecto
+    }
+    
+    private void actualizarInfoConfianza() {
+        // Buscar y actualizar el label en el panel de resultados
+        Component[] componentes = panelPruebas.getParent().getParent().getParent().getComponents();
+        for (Component comp : componentes) {
+            if (comp instanceof JPanel) {
+                Component[] hijos = ((JPanel)comp).getComponents();
+                for (Component hijo : hijos) {
+                    if (hijo instanceof JLabel) {
+                        JLabel label = (JLabel) hijo;
+                        if (label.getText() != null && label.getText().contains("Nivel de Confianza Actual")) {
+                            // Encontrar y actualizar el label del valor
+                            JPanel parentPanel = (JPanel) hijo.getParent();
+                            for (Component hermano : parentPanel.getComponents()) {
+                                if (hermano instanceof JLabel && hermano != hijo) {
+                                    JLabel valorLabel = (JLabel) hermano;
+                                    valorLabel.setText(String.format("%.1f%%", nivelConfianza * 100));
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    private void agregarPruebaConGrafica(String nombre, EstadisticasCalculador.ResultadoPrueba resultado, Color colorConjunto) {
+        JPanel panelPrueba = new JPanel(new BorderLayout(15, 15));
+        panelPrueba.setBackground(COLOR_HOVER);
+        panelPrueba.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(COLOR_BORDE, 1),
+            BorderFactory.createEmptyBorder(15, 15, 15, 15)
+        ));
+        panelPrueba.setMaximumSize(new Dimension(Integer.MAX_VALUE, 300));
+        
+        // Panel izquierdo: Detalles de la prueba
+        JPanel panelIzquierdo = new JPanel(new BorderLayout(12, 12));
+        panelIzquierdo.setBackground(COLOR_HOVER);
+        
+        // Encabezado con resultado
+        JPanel header = new JPanel(new BorderLayout());
+        header.setBackground(COLOR_HOVER);
+        
+        JLabel lblNombre = new JLabel("Prueba de " + nombre);
+        lblNombre.setFont(new Font("Inter", Font.BOLD, 14));
+        lblNombre.setForeground(COLOR_TEXTO);
+        
+        JLabel lblResultado = new JLabel(resultado.mensaje);
+        lblResultado.setFont(new Font("Inter", Font.BOLD, 13));
+        lblResultado.setForeground(resultado.pasa ? COLOR_EXITO : COLOR_ERROR);
+        
+        JLabel lblIcono = new JLabel(resultado.pasa ? "✓" : "✗");
+        lblIcono.setFont(new Font("Inter", Font.BOLD, 20));
+        lblIcono.setForeground(resultado.pasa ? COLOR_EXITO : COLOR_ERROR);
+        
+        JLabel lblConfianza = new JLabel(String.format("(Confianza: %.1f%%)", resultado.nivelConfianza * 100));
+        lblConfianza.setFont(new Font("Inter", Font.PLAIN, 10));
+        lblConfianza.setForeground(COLOR_TEXTO_SECUNDARIO);
+        
+        JPanel panelDerecha = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+        panelDerecha.setBackground(COLOR_HOVER);
+        panelDerecha.add(lblConfianza);
+        panelDerecha.add(lblIcono);
+        
+        header.add(lblNombre, BorderLayout.WEST);
+        header.add(lblResultado, BorderLayout.CENTER);
+        header.add(panelDerecha, BorderLayout.EAST);
+        
+        // Detalles de la prueba
+        JPanel detalles = new JPanel();
+        detalles.setLayout(new BoxLayout(detalles, BoxLayout.Y_AXIS));
+        detalles.setBackground(COLOR_HOVER);
+        
+        DecimalFormat df = new DecimalFormat("#.####");
+        
+        if (resultado.datosAdicionales != null && resultado.datosAdicionales.length > 0) {
+            if (nombre.equals("Media") || nombre.equals("Varianza")) {
+                detalles.add(crearDetalle("Valor calculado", df.format(resultado.datosAdicionales[0]), colorConjunto));
+                detalles.add(crearDetalle("Límite inferior", df.format(resultado.datosAdicionales[1]), colorConjunto));
+                detalles.add(crearDetalle("Límite superior", df.format(resultado.datosAdicionales[2]), colorConjunto));
+                detalles.add(crearDetalle("Valor Z crítico", df.format(resultado.datosAdicionales[3]), colorConjunto));
+                detalles.add(crearDetalle("Nivel de significancia (α)", df.format(1 - resultado.nivelConfianza), colorConjunto));
+            } else if (nombre.contains("Corridas")) {
+                detalles.add(crearDetalle("Corridas observadas", String.valueOf((int)resultado.datosAdicionales[0]), colorConjunto));
+                detalles.add(crearDetalle("Corridas esperadas", df.format(resultado.datosAdicionales[1]), colorConjunto));
+                detalles.add(crearDetalle("Estadístico Z", df.format(resultado.estadistico), colorConjunto));
+                detalles.add(crearDetalle("Valor Z crítico", df.format(resultado.datosAdicionales[3]), colorConjunto));
+                detalles.add(crearDetalle("Nivel de significancia (α)", df.format(1 - resultado.nivelConfianza), colorConjunto));
+            }
+        } else {
+            detalles.add(crearDetalle("Estadístico χ²", df.format(resultado.estadistico), colorConjunto));
+            if (resultado.valorCritico > 0) {
+                detalles.add(crearDetalle("Valor crítico (α=" + (1-resultado.nivelConfianza) + ")", 
+                                          df.format(resultado.valorCritico), colorConjunto));
+                detalles.add(crearDetalle("Grados de libertad", String.valueOf(resultado.gradosLibertad), colorConjunto));
+                detalles.add(crearDetalle("Nivel de significancia (α)", df.format(1 - resultado.nivelConfianza), colorConjunto));
+            }
+        }
+        
+        panelIzquierdo.add(header, BorderLayout.NORTH);
+        panelIzquierdo.add(detalles, BorderLayout.CENTER);
+        
+        // Panel derecho: Gráfica de distribución normal
+        JPanel panelGrafica = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                dibujarGraficaDistribucion(g, resultado, colorConjunto);
+            }
+        };
+        panelGrafica.setBackground(COLOR_HOVER);
+        panelGrafica.setPreferredSize(new Dimension(300, 200));
+        panelGrafica.setMinimumSize(new Dimension(250, 180));
+        
+        panelPrueba.add(panelIzquierdo, BorderLayout.CENTER);
+        panelPrueba.add(panelGrafica, BorderLayout.EAST);
+        
+        panelPruebas.add(panelPrueba);
+        panelPruebas.add(Box.createRigidArea(new Dimension(0, 15)));
+    }
+    
+    private void dibujarGraficaDistribucion(Graphics g, EstadisticasCalculador.ResultadoPrueba resultado, Color colorConjunto) {
+        Graphics2D g2 = (Graphics2D) g;
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        
+        int width = 280;
+        int height = 180;
+        int margin = 20;
+        
+        // Área de dibujo
+        int graphWidth = width - 2 * margin;
+        int graphHeight = height - 2 * margin;
+        
+        // Calcular valores críticos según el nivel de confianza
+        double alpha = 1 - resultado.nivelConfianza;
+        double alphaMitad = alpha / 2;
+        
+        // Para pruebas Z (Media, Varianza, Corridas)
+        double zCritico = 0;
+        double estadisticoZ = 0;
+        
+        if (resultado.datosAdicionales != null && resultado.datosAdicionales.length >= 4) {
+            zCritico = resultado.datosAdicionales[3]; // Valor Z crítico
+            estadisticoZ = Math.abs(resultado.estadistico); // Estadístico Z absoluto
+        }
+        
+        // Dibujar eje X
+        g2.setColor(COLOR_TEXTO_SECUNDARIO);
+        g2.drawLine(margin, height - margin, width - margin, height - margin);
+        
+        // Marcar puntos en el eje X
+        double[] puntosX = {-3, -2, -1, 0, 1, 2, 3};
+        for (double punto : puntosX) {
+            int x = margin + (int)((punto + 3) * graphWidth / 6);
+            g2.drawLine(x, height - margin - 3, x, height - margin + 3);
+            g2.setFont(new Font("Inter", Font.PLAIN, 9));
+            String label = String.format("%.0f", punto);
+            int labelWidth = g2.getFontMetrics().stringWidth(label);
+            g2.drawString(label, x - labelWidth/2, height - margin + 15);
+        }
+        
+        // Dibujar curva de distribución normal
+        g2.setColor(colorConjunto);
+        g2.setStroke(new BasicStroke(2));
+        
+        Path2D curva = new Path2D.Double();
+        boolean primero = true;
+        for (int i = 0; i <= graphWidth; i++) {
+            double x = -3 + (6.0 * i / graphWidth);
+            double y = funcionDensidadNormal(x);
+            int px = margin + i;
+            int py = height - margin - (int)(y * graphHeight * 1.5);
+            
+            if (primero) {
+                curva.moveTo(px, py);
+                primero = false;
+            } else {
+                curva.lineTo(px, py);
+            }
+        }
+        g2.draw(curva);
+        
+        // Dibujar áreas de aceptación y rechazo
+        if (zCritico > 0) {
+            // Calcular posiciones de los límites críticos
+            int xLimiteInferior = margin + (int)((-zCritico + 3) * graphWidth / 6);
+            int xLimiteSuperior = margin + (int)((zCritico + 3) * graphWidth / 6);
+            
+            // Área de aceptación (central)
+            Color colorAceptacion = new Color(colorConjunto.getRed(), colorConjunto.getGreen(), colorConjunto.getBlue(), 50);
+            g2.setColor(colorAceptacion);
+            g2.fillRect(xLimiteInferior, margin, xLimiteSuperior - xLimiteInferior, graphHeight);
+            
+            // Áreas de rechazo (colas)
+            Color colorRechazo = new Color(COLOR_ERROR.getRed(), COLOR_ERROR.getGreen(), COLOR_ERROR.getBlue(), 50);
+            g2.setColor(colorRechazo);
+            g2.fillRect(margin, margin, xLimiteInferior - margin, graphHeight);
+            g2.fillRect(xLimiteSuperior, margin, width - margin - xLimiteSuperior, graphHeight);
+            
+            // Líneas de límites críticos
+            g2.setColor(Color.WHITE);
+            g2.setStroke(new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{3}, 0));
+            g2.drawLine(xLimiteInferior, margin, xLimiteInferior, height - margin);
+            g2.drawLine(xLimiteSuperior, margin, xLimiteSuperior, height - margin);
+            
+            // Etiquetas de porcentajes
+            g2.setFont(new Font("Inter", Font.BOLD, 10));
+            g2.setColor(COLOR_TEXTO);
+            
+            // Área de aceptación (centro)
+            String aceptacion = String.format("%.1f%%", resultado.nivelConfianza * 100);
+            int aceptacionWidth = g2.getFontMetrics().stringWidth(aceptacion);
+            int aceptacionX = xLimiteInferior + (xLimiteSuperior - xLimiteInferior) / 2 - aceptacionWidth/2;
+            g2.drawString(aceptacion, aceptacionX, height - margin - 30);
+            
+            // Áreas de rechazo (colas)
+            String rechazo = String.format("%.1f%%", alphaMitad * 100);
+            int rechazoWidth = g2.getFontMetrics().stringWidth(rechazo);
+            
+            // Cola izquierda
+            g2.drawString(rechazo, margin + 5, height - margin - 30);
+            
+            // Cola derecha
+            g2.drawString(rechazo, width - margin - rechazoWidth - 5, height - margin - 30);
+            
+            // Dibujar línea del estadístico Z si existe
+            if (estadisticoZ > 0) {
+                int xEstadistico = margin + (int)((estadisticoZ + 3) * graphWidth / 6);
+                g2.setColor(COLOR_LINEA);
+                g2.setStroke(new BasicStroke(2));
+                g2.drawLine(xEstadistico, margin, xEstadistico, height - margin);
+                
+                // Indicador del valor del estadístico
+                g2.setFont(new Font("Inter", Font.BOLD, 9));
+                String estadisticoStr = String.format("Z=%.2f", resultado.estadistico);
+                int estadisticoWidth = g2.getFontMetrics().stringWidth(estadisticoStr);
+                g2.drawString(estadisticoStr, xEstadistico - estadisticoWidth/2, margin + 15);
+                
+                // Punto en la curva
+                double yCurva = funcionDensidadNormal(estadisticoZ);
+                int pyCurva = height - margin - (int)(yCurva * graphHeight * 1.5);
+                g2.fillOval(xEstadistico - 3, pyCurva - 3, 6, 6);
+            }
+        }
+        
+        // Título de la gráfica
+        g2.setFont(new Font("Inter", Font.BOLD, 11));
+        g2.setColor(colorConjunto);
+        String titulo = "Distribución Normal - Nivel de Confianza";
+        int tituloWidth = g2.getFontMetrics().stringWidth(titulo);
+        g2.drawString(titulo, margin + (graphWidth - tituloWidth)/2, margin - 5);
+    }
+    
+    private double funcionDensidadNormal(double x) {
+        // Función de densidad de probabilidad normal estándar
+        return (1.0 / Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * x * x);
+    }
+    
+    private JPanel crearDetalle(String etiqueta, String valor, Color color) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(COLOR_HOVER);
+        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 25));
+        
+        JLabel lblEtiqueta = new JLabel(etiqueta + ":");
+        lblEtiqueta.setFont(new Font("Inter", Font.PLAIN, 12));
+        lblEtiqueta.setForeground(COLOR_TEXTO_SECUNDARIO);
+        
+        JLabel lblValor = new JLabel(valor);
+        lblValor.setFont(new Font("JetBrains Mono", Font.BOLD, 12));
+        lblValor.setForeground(color);
+        
+        panel.add(lblEtiqueta, BorderLayout.WEST);
+        panel.add(lblValor, BorderLayout.EAST);
+        
+        return panel;
+    }
+    
+    private void limpiar() {
+        // Limpiar tablas
+        DefaultTableModel modelo1 = (DefaultTableModel) tablaNumeros1.getModel();
+        modelo1.setRowCount(0);
+        
+        DefaultTableModel modelo2 = (DefaultTableModel) tablaNumeros2.getModel();
+        modelo2.setRowCount(0);
+        
+        // Limpiar panel de pruebas
+        panelPruebas.removeAll();
+        panelPruebas.revalidate();
+        panelPruebas.repaint();
+        
+        // Limpiar resultados
+        for (int i = 0; i < resultadosPruebasConjunto1.length; i++) {
+            resultadosPruebasConjunto1[i] = null;
+            resultadosPruebasConjunto2[i] = null;
+        }
+        
+        // Limpiar números generados
+        numerosGenerados[0] = new ArrayList<>();
+        numerosGenerados[1] = new ArrayList<>();
     }
     
     private void mostrarError(String mensaje) {
-        JOptionPane.showMessageDialog(this, 
-            "<html><div style='font-family: Segoe UI; font-size: 14px; color: #ff6b6b; padding: 10px;'>" +
-            mensaje + "</div></html>",
-            "Error", JOptionPane.ERROR_MESSAGE);
+        JOptionPane.showMessageDialog(this, mensaje, "Error", JOptionPane.ERROR_MESSAGE);
+    }
+    
+    private void mostrarExito(String mensaje) {
+        JOptionPane.showMessageDialog(this, mensaje, "Éxito", JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    public static void main(String[] args) {
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        
+        SwingUtilities.invokeLater(() -> {
+            Pseudoaleatorios ventana = new Pseudoaleatorios();
+            ventana.setVisible(true);
+        });
     }
 }
