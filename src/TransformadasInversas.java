@@ -270,6 +270,8 @@ public class TransformadasInversas extends JFrame {
         
         try {
             // 1. Obtener la lista COMPLETA de datos automáticamente
+            //    Los datos son obtenidos del Singleton SimulacionDatos, donde fueron
+            //    guardados por la ventana de Pseudoaleatorios.
             List<Double> listaRi;
             if (cbConjuntoRi.getSelectedIndex() == 0) 
                 listaRi = SimulacionDatos.getInstancia().getConjunto1RiEn();
