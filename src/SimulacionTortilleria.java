@@ -11,43 +11,37 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 public class SimulacionTortilleria extends JFrame {
 
-    // Paleta de colores
+    // Colores
     private final Color COLOR_FONDO = new Color(15, 15, 20);
     private final Color COLOR_CARD = new Color(30, 30, 40);
-    private final Color COLOR_PRIMARIO = new Color(99, 102, 241);
     private final Color COLOR_TEXTO = new Color(240, 240, 245);
-    private final Color COLOR_TEXTO_SECUNDARIO = new Color(160, 165, 180);
     private final Color COLOR_BORDE = new Color(50, 55, 65);
-    private final Color COLOR_HOVER = new Color(40, 45, 55);
     private final Color COLOR_VERDE = new Color(16, 185, 129);
 
-    // Componentes Llegadas
-    private JComboBox<String> cbDistLlegadas;
-    private JPanel panelParamsLlegadas;
-    private JTextField txtLlegP1, txtLlegP2;
-    
-    // Componentes Servicio
-    private JComboBox<String> cbDistServicio;
-    private JPanel panelParamsServicio;
-    private JTextField txtSerP1, txtSerP2;
-
+    // Componentes UI
+    private JComboBox<String> cbDistLlegadas, cbDistServicio;
+    private JPanel panelParamsLlegadas, panelParamsServicio;
+    private JTextField txtLlegP1, txtLlegP2, txtSerP1, txtSerP2;
     private JTextField txtHoraInicio;
-    private JButton btnCargarCSV; // Botón nuevo
     
-    // Tablas y Gráficas
+    // Tabla y Gráfica
     private JTabbedPane tabbedPaneResultados;
     private JTable tablaSimulacion;
     private DefaultTableModel modeloTabla;
-    private PanelGraficaComparativa panelGraficaComparativa; // Panel nuevo
+    private PanelGraficaComparativa panelGraficaComparativa;
+
+    // Datos para gráfica
+    private List<double[]> ocupacionReal = new ArrayList<>();
+    private List<double[]> ocupacionSimulada = new ArrayList<>();
 
     private DecimalFormat dfRi = new DecimalFormat("0.####");
     private DecimalFormat dfTime = new DecimalFormat("0.##");
-    
-    private double mediaLlegadasReal = 0.0; // Variable para almacenar la media calculada
 
     public SimulacionTortilleria() {
         setTitle("Simulación Tabular - Tortillería La Providencia");
@@ -58,403 +52,250 @@ public class SimulacionTortilleria extends JFrame {
         getContentPane().setBackground(COLOR_FONDO);
 
         if (!SimulacionDatos.getInstancia().hayDatos()) {
-            JOptionPane.showMessageDialog(this,
-                "¡Alerta!\nNo se han detectado números pseudoaleatorios generados.\n" +
-                "Por favor, vaya al módulo 'Generación y Pruebas' primero.",
-                "Faltan Datos", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "¡Alerta! Faltan datos pseudoaleatorios.", "Error", JOptionPane.WARNING_MESSAGE);
         }
 
         add(crearPanelSuperior(), BorderLayout.NORTH);
         add(crearPanelCentral(), BorderLayout.CENTER);
         add(crearPanelInferior(), BorderLayout.SOUTH);
 
-        // Inicializar paneles de parámetros (labels temporales)
-        // Se necesitan labels dummies para inicializar el método, aunque no los usemos como variables de clase
-        JLabel l1 = new JLabel(), l2 = new JLabel(), l3 = new JLabel(), l4 = new JLabel();
-        actualizarInputsParams(cbDistLlegadas, panelParamsLlegadas, l1, txtLlegP1, l2, txtLlegP2);
-        actualizarInputsParams(cbDistServicio, panelParamsServicio, l3, txtSerP1, l4, txtSerP2);
+        // Inicializar
+        JLabel t1=new JLabel(), t2=new JLabel(), t3=new JLabel(), t4=new JLabel();
+        actualizarInputsParams(cbDistLlegadas, panelParamsLlegadas, t1, txtLlegP1, t2, txtLlegP2);
+        actualizarInputsParams(cbDistServicio, panelParamsServicio, t3, txtSerP1, t4, txtSerP2);
     }
 
     private JPanel crearPanelSuperior() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(COLOR_FONDO);
-        panel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+        JPanel p = new JPanel(new BorderLayout());
+        p.setBackground(COLOR_FONDO);
+        p.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
 
-        JLabel titulo = new JLabel("Simulación del Flujo de Clientes");
-        titulo.setFont(new Font("Inter", Font.BOLD, 22));
-        titulo.setForeground(COLOR_TEXTO);
-        panel.add(titulo, BorderLayout.WEST);
+        JLabel t = new JLabel("Simulación del Flujo de Clientes");
+        t.setFont(new Font("SansSerif", Font.BOLD, 22)); t.setForeground(COLOR_TEXTO);
+        p.add(t, BorderLayout.WEST);
 
-        JPanel panelControles = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
-        panelControles.setBackground(COLOR_FONDO);
+        JPanel ctrls = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        ctrls.setBackground(COLOR_FONDO);
         
-        // Botón Cargar CSV
-        btnCargarCSV = crearBoton("Cargar CSV Reales", COLOR_PRIMARIO, true);
-        btnCargarCSV.setPreferredSize(new Dimension(180, 35));
-        btnCargarCSV.addActionListener(e -> cargarDatosCSV());
+        JButton btnCsv = new JButton("Cargar CSV Reales");
+        btnCsv.addActionListener(e -> cargarDatosCSV());
         
-        JLabel lblHora = new JLabel("Hora Inicio (HH:MM): ");
-        lblHora.setFont(new Font("Inter", Font.BOLD, 14));
-        lblHora.setForeground(COLOR_TEXTO_SECUNDARIO);
-        txtHoraInicio = crearInput("11:00");
-        txtHoraInicio.setPreferredSize(new Dimension(80, 35));
+        JLabel lH = new JLabel("Hora Inicio: "); lH.setForeground(Color.GRAY);
+        txtHoraInicio = new JTextField("11:00", 5);
         
-        panelControles.add(btnCargarCSV);
-        panelControles.add(lblHora);
-        panelControles.add(txtHoraInicio);
-        
-        panel.add(panelControles, BorderLayout.EAST);
-
-        return panel;
+        ctrls.add(btnCsv); ctrls.add(lH); ctrls.add(txtHoraInicio);
+        p.add(ctrls, BorderLayout.EAST);
+        return p;
     }
 
     private JPanel crearPanelCentral() {
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBackground(COLOR_FONDO);
-        panel.setBorder(BorderFactory.createEmptyBorder(0, 20, 20, 20));
+        JPanel p = new JPanel(new GridBagLayout());
+        p.setBackground(COLOR_FONDO);
+        GridBagConstraints g = new GridBagConstraints();
+        g.fill = GridBagConstraints.BOTH; g.insets = new Insets(5, 5, 5, 5);
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.BOTH;
-        gbc.insets = new Insets(0, 0, 15, 15);
+        // Configuración
+        g.gridx=0; g.gridy=0; g.weightx=0.5;
+        p.add(crearPanelConfigDistribucion("Tiempos de Llegada", true), g);
+        g.gridx=1;
+        p.add(crearPanelConfigDistribucion("Tiempos de Servicio", false), g);
 
-        // Panel Configuración Llegadas
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0.3; gbc.weighty = 0.0;
-        panel.add(crearPanelConfigDistribucion("Tiempos entre Llegadas (Conjunto 1)", true), gbc);
+        // Botón
+        g.gridx=0; g.gridy=1; g.gridwidth=2;
+        JButton btn = new JButton("Ejecutar Simulación");
+        btn.setBackground(COLOR_VERDE); btn.setForeground(Color.WHITE);
+        btn.addActionListener(e -> ejecutarSimulacion());
+        p.add(btn, g);
 
-        // Panel Configuración Servicio
-        gbc.gridx = 1; gbc.gridy = 0; gbc.weightx = 0.3;
-        gbc.insets = new Insets(0, 0, 15, 0);
-        panel.add(crearPanelConfigDistribucion("Tiempos de Servicio (Conjunto 2)", false), gbc);
-
-        // Botón Ejecutar
-        gbc.gridx = 0; gbc.gridy = 1; gbc.gridwidth = 2; gbc.weighty = 0.0;
-        gbc.insets = new Insets(0, 0, 20, 0);
-        gbc.fill = GridBagConstraints.NONE;
-        JButton btnSimular = crearBoton("Ejecutar Simulación", COLOR_VERDE, true);
-        btnSimular.setPreferredSize(new Dimension(300, 45));
-        btnSimular.addActionListener(e -> ejecutarSimulación());
-        panel.add(btnSimular, gbc);
-
-        // TabbedPane con Tabla y Gráfica (Sustituye al panel tabla directo)
-        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2; gbc.weightx = 1.0; gbc.weighty = 1.0;
-        gbc.fill = GridBagConstraints.BOTH;
-        
+        // Resultados
+        g.gridy=2; g.weighty=1.0;
         tabbedPaneResultados = new JTabbedPane();
-        tabbedPaneResultados.addTab("Tabla de Simulación", crearPanelTabla());
-        tabbedPaneResultados.addTab("Gráfica Comparativa (Real vs Simulado)", crearPanelGrafica());
+        tabbedPaneResultados.addTab("Tabla Simular", crearPanelTabla());
+        tabbedPaneResultados.addTab("Gráfica Hora Pico", crearPanelGrafica());
+        p.add(tabbedPaneResultados, g);
         
-        panel.add(tabbedPaneResultados, gbc);
-
-        return panel;
+        return p;
     }
 
-    private JPanel crearPanelConfigDistribucion(String titulo, boolean esLlegadas) {
-        JPanel card = new JPanel(new BorderLayout());
-        estilizarCard(card);
-        TitledBorder border = BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(COLOR_BORDE), titulo);
-        border.setTitleColor(COLOR_TEXTO);
-        border.setTitleFont(new Font("Inter", Font.BOLD, 14));
-        card.setBorder(BorderFactory.createCompoundBorder(border, BorderFactory.createEmptyBorder(10, 15, 15, 15)));
+    private JPanel crearPanelInferior() {
+        JPanel p = new JPanel(new FlowLayout(FlowLayout.RIGHT)); p.setBackground(COLOR_FONDO);
+        JButton btn = new JButton("Volver");
+        btn.addActionListener(e -> dispose());
+        p.add(btn); return p;
+    }
 
-        JComboBox<String> combo = new JComboBox<>(new String[]{"Exponencial", "Uniforme", "Normal"});
-        estilizarCombo(combo);
+    private JPanel crearPanelConfigDistribucion(String tit, boolean esLleg) {
+        JPanel p = new JPanel(new BorderLayout());
+        p.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(COLOR_BORDE), tit));
+        p.setBackground(COLOR_CARD); ((TitledBorder)p.getBorder()).setTitleColor(COLOR_TEXTO);
+
+        JComboBox<String> cb = new JComboBox<>(new String[]{"Empírica (Datos Excel)", "Exponencial", "Uniforme", "Normal"});
+        JPanel pIn = new JPanel(); pIn.setLayout(new BoxLayout(pIn, BoxLayout.Y_AXIS)); pIn.setBackground(COLOR_CARD);
         
-        JPanel panelParams = new JPanel();
-        panelParams.setLayout(new BoxLayout(panelParams, BoxLayout.Y_AXIS));
-        panelParams.setBackground(COLOR_CARD);
+        JLabel l1=new JLabel(), l2=new JLabel(); JTextField t1=new JTextField(), t2=new JTextField();
+        if(esLleg) { cbDistLlegadas=cb; panelParamsLlegadas=pIn; txtLlegP1=t1; txtLlegP2=t2; }
+        else { cbDistServicio=cb; panelParamsServicio=pIn; txtSerP1=t1; txtSerP2=t2; }
 
-        // Labels internos para pasar al listener (aunque no se guarden en clase)
-        JLabel lblP1 = crearLabel("P1"); 
-        JLabel lblP2 = crearLabel("P2"); 
-        JTextField txtP1 = crearInput("");
-        JTextField txtP2 = crearInput("");
+        cb.addItemListener(e -> { if(e.getStateChange()==ItemEvent.SELECTED) actualizarInputsParams(cb, pIn, l1, t1, l2, t2); });
+        p.add(cb, BorderLayout.NORTH); p.add(pIn, BorderLayout.CENTER);
+        return p;
+    }
 
-        if (esLlegadas) {
-            cbDistLlegadas = combo; panelParamsLlegadas = panelParams;
-            txtLlegP1 = txtP1; txtLlegP2 = txtP2;
+    private void actualizarInputsParams(JComboBox cb, JPanel p, JLabel l1, JTextField t1, JLabel l2, JTextField t2) {
+        p.removeAll();
+        String sel = (String)cb.getSelectedItem();
+        if(sel.contains("Empírica")) {
+            JLabel l = new JLabel("Probabilidades del Excel"); l.setForeground(COLOR_VERDE); p.add(l);
+            t1.setText("0"); t2.setText("0");
         } else {
-            cbDistServicio = combo; panelParamsServicio = panelParams;
-            txtSerP1 = txtP1; txtSerP2 = txtP2;
+            l1.setText("Param 1:"); l2.setText("Param 2:");
+            p.add(l1); p.add(t1); p.add(l2); p.add(t2);
         }
-
-        combo.addItemListener(e -> {
-            if(e.getStateChange() == ItemEvent.SELECTED)
-                actualizarInputsParams(combo, panelParams, lblP1, txtP1, lblP2, txtP2);
-        });
-
-        card.add(combo, BorderLayout.NORTH);
-        card.add(panelParams, BorderLayout.CENTER);
-        return card;
-    }
-
-    private void actualizarInputsParams(JComboBox<String> combo, JPanel panel, JLabel lbl1, JTextField txt1, JLabel lbl2, JTextField txt2) {
-        panel.removeAll();
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
-        String seleccion = (String) combo.getSelectedItem();
-
-        if ("Exponencial".equals(seleccion)) {
-            agregarCampo(panel, lbl1, txt1, "Media (μ):", "15");
-        } else if ("Uniforme".equals(seleccion)) {
-            agregarCampo(panel, lbl1, txt1, "Mínimo (a):", "10");
-            agregarCampo(panel, lbl2, txt2, "Máximo (b):", "25");
-        } else if ("Normal".equals(seleccion)) {
-            agregarCampo(panel, lbl1, txt1, "Media (μ):", "20");
-            agregarCampo(panel, lbl2, txt2, "Desv. Std (σ):", "5");
-        }
-        panel.revalidate(); panel.repaint();
-    }
-
-    private void agregarCampo(JPanel panel, JLabel lbl, JTextField txt, String texto, String def) {
-        lbl.setText(texto);
-        // Si el texto está vacío (recién creado), poner default. Si no, conservar valor (útil al cambiar pestañas o cargar csv)
-        if(txt.getText().isEmpty()) txt.setText(def);
-        panel.add(lbl); panel.add(txt);
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+        p.revalidate(); p.repaint();
     }
 
     private JPanel crearPanelTabla() {
-        JPanel card = new JPanel(new BorderLayout());
-        card.setBackground(COLOR_CARD); // Sin borde extra
-        
-        String[] columnas = {
-            "# Cliente", "# Aleat (Lleg)", "T. Lleg", "H. Lleg",
-            "# Aleat (Ser)", "T. Ser",
-            "Ini Serv", "Fin Serv", "Esp (Cola)", "I. Cola", "Ocio (Serv)"
-        };
-
-        modeloTabla = new DefaultTableModel(columnas, 0) {
-            @Override public boolean isCellEditable(int row, int column) { return false; }
-        };
-
+        JPanel p = new JPanel(new BorderLayout());
+        String[] h = {"#", "Ri(L)", "T.Lleg", "Hora Lleg", "Ri(S)", "T.Serv", "Inicio", "Fin", "Cola", "Ocio"};
+        modeloTabla = new DefaultTableModel(h, 0);
         tablaSimulacion = new JTable(modeloTabla);
-        estilizarTabla(tablaSimulacion);
-        tablaSimulacion.getColumnModel().getColumn(0).setPreferredWidth(70);
-        tablaSimulacion.getColumnModel().getColumn(9).setPreferredWidth(60);
-
-        JScrollPane scroll = new JScrollPane(tablaSimulacion);
-        scroll.setBorder(BorderFactory.createEmptyBorder());
-        scroll.getViewport().setBackground(COLOR_CARD);
-        card.add(scroll, BorderLayout.CENTER);
-        return card;
+        p.add(new JScrollPane(tablaSimulacion));
+        return p;
     }
-    
+
     private JPanel crearPanelGrafica() {
-        JPanel card = new JPanel(new BorderLayout());
-        card.setBackground(COLOR_CARD);
+        JPanel p = new JPanel(new BorderLayout());
         panelGraficaComparativa = new PanelGraficaComparativa();
-        card.add(panelGraficaComparativa, BorderLayout.CENTER);
-        return card;
-    }
-    
-    // --- LÓGICA DE CARGA CSV ---
-    private void cargarDatosCSV() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setFileFilter(new FileNameExtensionFilter("Archivos CSV", "csv"));
-        
-        if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-            File file = fileChooser.getSelectedFile();
-            List<Double> tiemposReales = new ArrayList<>();
-            double suma = 0;
-            
-            try (BufferedReader br = new BufferedReader(new FileReader(file))) {
-                String linea;
-                while ((linea = br.readLine()) != null) {
-                    try {
-                        // Asumimos 1 columna con tiempos entre llegadas
-                        double valor = Double.parseDouble(linea.trim().replace(",", "."));
-                        tiemposReales.add(valor);
-                        suma += valor;
-                    } catch (NumberFormatException ex) { /* Ignorar encabezados */ }
-                }
-                
-                if (!tiemposReales.isEmpty()) {
-                    SimulacionDatos.getInstancia().setDatosRealesLlegadas(tiemposReales);
-                    
-                    // CÁLCULO DE MEDIA REAL
-                    mediaLlegadasReal = suma / tiemposReales.size();
-                    
-                    // Actualizar interfaz automáticamente
-                    cbDistLlegadas.setSelectedItem("Exponencial"); // Modelo usual para llegadas
-                    txtLlegP1.setText(String.format("%.4f", mediaLlegadasReal).replace(",", "."));
-                    
-                    JOptionPane.showMessageDialog(this, 
-                        "Datos cargados: " + tiemposReales.size() + "\n" +
-                        "Media calculada: " + String.format("%.4f", mediaLlegadasReal) + "\n\n" +
-                        "La distribución de llegadas se ha configurado automáticamente\n" +
-                        "con la media de los datos reales.", 
-                        "Carga Exitosa", JOptionPane.INFORMATION_MESSAGE);
-                }
-                
-            } catch (IOException ex) {
-                JOptionPane.showMessageDialog(this, "Error al leer archivo: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        }
+        p.add(panelGraficaComparativa);
+        return p;
     }
 
-    // --- NÚCLEO DE LA SIMULACIÓN ---
-    private void ejecutarSimulación() {
+    // --- LÓGICA DE SIMULACIÓN Y TRANSFORMADAS INVERSAS ---
+
+    private void ejecutarSimulacion() {
         SimulacionDatos datos = SimulacionDatos.getInstancia();
-        if (!datos.hayDatos()) {
-            JOptionPane.showMessageDialog(this, "No hay datos de Ri generados. Vuelva a la etapa 1.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+        if (!datos.hayDatos()) return;
 
         modeloTabla.setRowCount(0);
-        List<Double> riLlegadas = datos.getConjunto1RiEn();
-        List<Double> riServicio = datos.getConjunto2RiSn();
+        List<Double> rL = datos.getConjunto1RiEn();
+        List<Double> rS = datos.getConjunto2RiSn();
         int N = datos.getNGenerados();
-        
-        // Listas para la gráfica
-        List<Double> simuladosAcumulados = new ArrayList<>();
+        List<EventoSistema> eventosSimul = new ArrayList<>();
 
         try {
-            // 1. Obtener parámetros desde la interfaz (que ya tiene la media real si se cargó CSV)
-            // Se usa el valor ACTUAL de los text fields, permitiendo ajuste manual post-carga
-            Parametros paramsLleg = obtenerParametros(cbDistLlegadas, txtLlegP1, txtLlegP2);
-            Parametros paramsSer = obtenerParametros(cbDistServicio, txtSerP1, txtSerP2);
-            int horaBaseMinutos = parsearHoraInicio(txtHoraInicio.getText());
+            Parametros pLleg = getParams(cbDistLlegadas, txtLlegP1, txtLlegP2);
+            Parametros pServ = getParams(cbDistServicio, txtSerP1, txtSerP2);
+            double horaBase = parsearHoraSimple(txtHoraInicio.getText());
+            panelGraficaComparativa.setHoraInicio((int)horaBase);
 
-            double finServicioAnterior = horaBaseMinutos;
-            double hLlegadaAcumulada = horaBaseMinutos;
+            double finAnt = horaBase;
+            double acumLleg = horaBase;
 
-            // 2. Bucle principal
             for (int i = 0; i < N; i++) {
-                // A. Llegadas (Transformada Inversa aplicada aquí)
-                double rLleg = riLlegadas.get(i);
-                double tLleg = calcularVariable(rLleg, paramsLleg); 
-                hLlegadaAcumulada += tLleg;
+                // 1. Calcular Tiempos usando Transformada Inversa
+                double riL = rL.get(i);
+                double tLleg = pLleg.empirica ? getEmpiricaLlegadas(riL) : calcVar(riL, pLleg);
+                acumLleg += tLleg;
+
+                double riS = rS.get(i);
+                double tServ = pServ.empirica ? getEmpiricaServicio(riS) : calcVar(riS, pServ);
+
+                // 2. Lógica Tabular
+                double iniServ = Math.max(acumLleg, finAnt);
+                double finServ = iniServ + tServ;
                 
-                // Guardar acumulado (restando hora base para iniciar en 0)
-                simuladosAcumulados.add(hLlegadaAcumulada - horaBaseMinutos);
-
-                // B. Servicio
-                double rSer = riServicio.get(i);
-                double tSer = calcularVariable(rSer, paramsSer);
-
-                // C. Lógica Colas
-                double iniServ = Math.max(hLlegadaAcumulada, finServicioAnterior);
-                double finServ = iniServ + tSer;
-                double espera = iniServ - hLlegadaAcumulada;
-                int indicadorCola = (espera > 0.01) ? 1 : 0;
-                double ocio = iniServ - finServicioAnterior;
+                // 3. Generar Eventos para la Gráfica (Esto crea la subida y bajada)
+                // Cliente llega -> Sube ocupación (+1)
+                eventosSimul.add(new EventoSistema(acumLleg - horaBase, 1));
+                // Cliente se va -> Baja ocupación (-1)
+                eventosSimul.add(new EventoSistema(finServ - horaBase, -1));
 
                 modeloTabla.addRow(new Object[]{
-                    i + 1, dfRi.format(rLleg), dfTime.format(tLleg), minutosAHoraStr(hLlegadaAcumulada),
-                    dfRi.format(rSer), dfTime.format(tSer),
-                    minutosAHoraStr(iniServ), minutosAHoraStr(finServ), dfTime.format(espera), indicadorCola, dfTime.format(ocio)
+                    i+1, dfRi.format(riL), dfTime.format(tLleg), min2Hora(acumLleg),
+                    dfRi.format(riS), dfTime.format(tServ), min2Hora(iniServ), min2Hora(finServ),
+                    dfTime.format(iniServ-acumLleg), dfTime.format(iniServ-finAnt)
                 });
-
-                finServicioAnterior = finServ;
+                finAnt = finServ;
             }
             
-            // 3. Actualizar Gráfica
-            List<Double> realesRaw = datos.getDatosRealesLlegadas();
-            List<Double> realesAcumulados = new ArrayList<>();
-            if(!realesRaw.isEmpty()) {
-                double acc = 0;
-                for(Double val : realesRaw) {
-                    acc += val;
-                    realesAcumulados.add(acc);
+            // 4. Calcular curva y actualizar gráfica
+            ocupacionSimulada = calcularCurvaOcupacion(eventosSimul);
+            panelGraficaComparativa.setDatos(ocupacionReal, ocupacionSimulada);
+            tabbedPaneResultados.setSelectedIndex(1);
+
+        } catch (Exception e) { e.printStackTrace(); }
+    }
+
+    private void cargarDatosCSV() {
+        JFileChooser fc = new JFileChooser();
+        fc.setFileFilter(new FileNameExtensionFilter("CSV", "csv"));
+        if(fc.showOpenDialog(this)==JFileChooser.APPROVE_OPTION){
+            File f = fc.getSelectedFile();
+            List<EventoSistema> eventosReales = new ArrayList<>();
+            try(BufferedReader br = new BufferedReader(new FileReader(f))){
+                String l; double t0 = -1;
+                while((l=br.readLine())!=null){
+                    String[] p = l.split(",");
+                    if(p.length>=2 && p[0].matches("\\d{2}:\\d{2}:\\d{2}")){
+                        double tl = parsearHora(p[0]); // Llegada
+                        double ts = parsearHora(p[1]); // Salida
+                        if(t0==-1) t0=tl;
+                        eventosReales.add(new EventoSistema(tl-t0, 1));
+                        eventosReales.add(new EventoSistema(ts-t0, -1));
+                    }
                 }
-                // Si hay muchos más simulados que reales, la gráfica se ajusta en el panel
-                panelGraficaComparativa.setDatos(realesAcumulados, simuladosAcumulados);
-            } else {
-                // Si no hay reales, solo mandamos simulados (la gráfica manejará el null)
-                panelGraficaComparativa.setDatos(new ArrayList<>(), simuladosAcumulados);
-            }
-            
-            // Auto-cambiar a la pestaña de gráfica si hay datos reales para comparar
-            if(!realesAcumulados.isEmpty()) {
-                tabbedPaneResultados.setSelectedIndex(1); 
-            }
-
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error: " + e.getMessage() + "\nVerifique parámetros numéricos.", "Error", JOptionPane.ERROR_MESSAGE);
-            e.printStackTrace();
+                if(!eventosReales.isEmpty()){
+                    ocupacionReal = calcularCurvaOcupacion(eventosReales);
+                    panelGraficaComparativa.setHoraInicio((int)t0);
+                    txtHoraInicio.setText(min2Hora(t0));
+                    JOptionPane.showMessageDialog(this, "Datos CSV cargados para comparación.");
+                }
+            }catch(Exception e){}
         }
     }
-    
-    // --- Helpers ---
-    private JPanel crearPanelInferior() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 20, 20));
-        panel.setBackground(COLOR_FONDO);
-        JButton btnVolver = crearBoton("Volver al Menú", COLOR_TEXTO_SECUNDARIO, false);
-        btnVolver.addActionListener(e -> { new MenuPrincipal().setVisible(true); dispose(); });
-        panel.add(btnVolver);
-        return panel;
-    }
 
-    private double calcularVariable(double ri, Parametros p) {
-        SimulacionDatos math = SimulacionDatos.getInstancia();
-        switch (p.tipo) {
-            case "Exponencial": return math.calcularExponencial(ri, p.p1);
-            case "Uniforme":    return math.calcularUniforme(ri, p.p1, p.p2);
-            case "Normal":      return math.calcularNormal(ri, p.p1, p.p2); 
+    // --- CÁLCULO DE OCUPACIÓN (Algoritmo de la montaña) ---
+    private List<double[]> calcularCurvaOcupacion(List<EventoSistema> evs) {
+        Collections.sort(evs, Comparator.comparingDouble(e -> e.t));
+        List<double[]> curva = new ArrayList<>();
+        int ocup = 0;
+        curva.add(new double[]{0,0});
+        for(EventoSistema e : evs) {
+            ocup += e.tipo;
+            curva.add(new double[]{e.t, ocup});
+        }
+        return curva;
+    }
+    private static class EventoSistema { double t; int tipo; EventoSistema(double x, int y){t=x; tipo=y;} }
+
+    // --- TRANSFORMADAS INVERSAS (Datos del Excel) ---
+    private double getEmpiricaLlegadas(double r) {
+        if(r < 0.151) return 3.0;
+        if(r < 0.930) return 4.0;
+        return 5.0;
+    }
+    private double getEmpiricaServicio(double r) {
+        if(r < 0.195) return 2.0;
+        if(r < 0.954) return 3.0;
+        return 4.0;
+    }
+    private double calcVar(double r, Parametros p) {
+        SimulacionDatos m = SimulacionDatos.getInstancia();
+        switch(p.tipo){
+            case "Exponencial": return m.calcularExponencial(r, p.p1);
+            case "Uniforme": return m.calcularUniforme(r, p.p1, p.p2);
+            case "Normal": return m.calcularNormal(r, p.p1, p.p2);
             default: return 0;
         }
     }
 
-    private static class Parametros {
-        String tipo; double p1, p2;
-        Parametros(String t, double pa1, double pa2) { tipo = t; p1 = pa1; p2 = pa2; }
+    // Helpers
+    private Parametros getParams(JComboBox c, JTextField t1, JTextField t2) {
+        double v1=0, v2=0; try{v1=Double.parseDouble(t1.getText()); v2=Double.parseDouble(t2.getText());}catch(Exception e){}
+        return new Parametros((String)c.getSelectedItem(), v1, v2);
     }
-
-    private Parametros obtenerParametros(JComboBox<String> cb, JTextField t1, JTextField t2) {
-        String tipo = (String) cb.getSelectedItem();
-        double p1 = 0, p2 = 0;
-        try { if(!t1.getText().isEmpty()) p1 = Double.parseDouble(t1.getText()); } catch(Exception e){}
-        try { if(t2.isShowing() && !t2.getText().isEmpty()) p2 = Double.parseDouble(t2.getText()); } catch(Exception e){}
-        return new Parametros(tipo, p1, p2);
-    }
-
-    private int parsearHoraInicio(String horaStr) throws Exception {
-        String[] partes = horaStr.split(":");
-        if (partes.length != 2) throw new Exception("Formato inválido");
-        return Integer.parseInt(partes[0]) * 60 + Integer.parseInt(partes[1]);
-    }
-
-    private String minutosAHoraStr(double minutosTotales) {
-        int totalMin = (int) Math.round(minutosTotales);
-        int hh = (totalMin / 60) % 24;
-        int mm = totalMin % 60;
-        return String.format("%02d:%02d", hh, mm);
-    }
-
-    // Estilos UI
-    private void estilizarCard(JPanel p) { p.setBackground(COLOR_CARD); p.setBorder(BorderFactory.createLineBorder(COLOR_BORDE, 1)); }
-    private JLabel crearLabel(String t) { JLabel l = new JLabel(t); l.setFont(new Font("Inter", Font.BOLD, 12)); l.setForeground(COLOR_TEXTO_SECUNDARIO); return l; }
-    private JTextField crearInput(String t) {
-        JTextField x = new JTextField(t); x.setFont(new Font("Inter", Font.PLAIN, 14));
-        x.setBackground(COLOR_HOVER); x.setForeground(COLOR_TEXTO); x.setCaretColor(COLOR_TEXTO);
-        x.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(COLOR_BORDE), BorderFactory.createEmptyBorder(8, 10, 8, 10)));
-        x.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40)); return x;
-    }
-    private void estilizarCombo(JComboBox<String> c) {
-        c.setFont(new Font("Inter", Font.PLAIN, 14)); c.setBackground(COLOR_HOVER); c.setForeground(Color.WHITE);
-        c.setBorder(BorderFactory.createLineBorder(COLOR_BORDE)); c.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-    }
-    private void estilizarTabla(JTable t) {
-        t.setFont(new Font("Inter", Font.PLAIN, 13)); t.setBackground(COLOR_CARD); t.setForeground(COLOR_TEXTO); t.setGridColor(COLOR_BORDE);
-        t.setRowHeight(28); t.setShowVerticalLines(true); t.setShowHorizontalLines(true);
-        t.getTableHeader().setFont(new Font("Inter", Font.BOLD, 12)); t.getTableHeader().setBackground(COLOR_HOVER);
-        t.getTableHeader().setForeground(COLOR_TEXTO);
-        t.getTableHeader().setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, COLOR_BORDE));
-        DefaultTableCellRenderer r = new DefaultTableCellRenderer(); r.setHorizontalAlignment(JLabel.CENTER);
-        for(int i=0; i<t.getColumnCount(); i++) t.getColumnModel().getColumn(i).setCellRenderer(r);
-    }
-    private JButton crearBoton(String t, Color c, boolean r) {
-        JButton b = new JButton(t) {
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D)g.create(); g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                if(getModel().isPressed()) g2.setColor(c.darker()); else if(getModel().isRollover()) g2.setColor(r?c.brighter():COLOR_HOVER); else g2.setColor(r?c:COLOR_CARD);
-                g2.fillRoundRect(0,0,getWidth(),getHeight(),8,8);
-                if(!r){ g2.setColor(c); g2.setStroke(new BasicStroke(1.5f)); g2.drawRoundRect(1,1,getWidth()-2,getHeight()-2,8,8); }
-                g2.dispose(); super.paintComponent(g);
-            }
-        };
-        b.setFont(new Font("Inter", Font.BOLD, 14)); b.setForeground(r?Color.WHITE:c); b.setContentAreaFilled(false);
-        b.setBorderPainted(false); b.setFocusPainted(false); b.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        return b;
-    }
+    private double parsearHora(String s) { String[] p=s.split(":"); return Double.parseDouble(p[0])*60+Double.parseDouble(p[1]); }
+    private double parsearHoraSimple(String s) { return parsearHora(s+":00"); }
+    private String min2Hora(double m) { int t=(int)Math.round(m); return String.format("%02d:%02d", (t/60)%24, t%60); }
+    private static class Parametros { String tipo; double p1, p2; boolean empirica; Parametros(String t, double a, double b){tipo=t; p1=a; p2=b; empirica=t.contains("Empírica");}}
 }

@@ -22,7 +22,7 @@ public class TransformadasInversas extends JFrame {
     // Componentes
     private JComboBox<String> cbConjuntoRi;
     private JComboBox<String> cbDistribucion;
-    private JLabel lblCantidadDatos; // Nuevo Label informativo
+    private JLabel lblCantidadDatos; 
     private JTextField txtParam1, txtParam2, txtParam3;
     private JLabel lblParam1, lblParam2, lblParam3;
     private JPanel panelInputsDinamicos;
@@ -57,7 +57,7 @@ public class TransformadasInversas extends JFrame {
         add(crearPanelInferior(), BorderLayout.SOUTH);
         
         actualizarCamposInputs();
-        actualizarContadorDatos(); // Actualizar el label de cantidad al inicio
+        actualizarContadorDatos(); 
     }
 
     private JPanel crearPanelSuperior() {
@@ -119,20 +119,21 @@ public class TransformadasInversas extends JFrame {
         contenido.add(crearLabel("Fuente de Datos (Ri):"));
         cbConjuntoRi = new JComboBox<>(new String[]{"Conjunto 1 (Entradas)", "Conjunto 2 (Salidas)"});
         estilizarCombo(cbConjuntoRi);
-        cbConjuntoRi.addItemListener(e -> actualizarContadorDatos()); // Actualizar contador al cambiar conjunto
+        cbConjuntoRi.addItemListener(e -> actualizarContadorDatos()); 
         contenido.add(cbConjuntoRi);
         contenido.add(Box.createRigidArea(new Dimension(0, 10)));
         
-        // Label Informativo de Cantidad (N AUTOMÁTICO)
         lblCantidadDatos = new JLabel("Cargando datos...");
         lblCantidadDatos.setFont(new Font("Inter", Font.ITALIC, 12));
-        lblCantidadDatos.setForeground(COLOR_GRAFICA_BARRA); // Color verde para resaltar
+        lblCantidadDatos.setForeground(COLOR_GRAFICA_BARRA); 
         contenido.add(lblCantidadDatos);
         contenido.add(Box.createRigidArea(new Dimension(0, 20)));
 
-        // Selector Distribución
+        // Selector Distribución con opciones EMPÍRICAS agregadas
         contenido.add(crearLabel("Transformar a Distribución:"));
         cbDistribucion = new JComboBox<>(new String[]{
+            "Empírica Llegadas (Excel)",
+            "Empírica Servicio (Excel)",
             "Uniforme (A, B)", 
             "Exponencial (Media)", 
             "Normal (Media, Desv.Est)", 
@@ -238,9 +239,11 @@ public class TransformadasInversas extends JFrame {
         panelInputsDinamicos.removeAll();
         String sel = (String) cbDistribucion.getSelectedItem();
         
-        // Configuramos solo los parámetros necesarios para la FÓRMULA de transformación
-        // (A, B, Media, etc), NO la cantidad ni límites de iteración.
-        if (sel.contains("Uniforme")) {
+        if (sel.contains("Empírica")) {
+             JLabel lblInfo = crearLabel("<html>Probabilidades fijas cargadas<br>desde el archivo Excel.</html>");
+             lblInfo.setForeground(COLOR_GRAFICA_BARRA);
+             panelInputsDinamicos.add(lblInfo);
+        } else if (sel.contains("Uniforme")) {
             agregarCampo(lblParam1, txtParam1, "Límite A (Mín):", "0");
             agregarCampo(lblParam2, txtParam2, "Límite B (Máx):", "10");
         } else if (sel.contains("Exponencial")) {
@@ -269,34 +272,42 @@ public class TransformadasInversas extends JFrame {
         }
         
         try {
-            // 1. Obtener la lista COMPLETA de datos automáticamente
-            //    Los datos son obtenidos del Singleton SimulacionDatos, donde fueron
-            //    guardados por la ventana de Pseudoaleatorios.
             List<Double> listaRi;
             if (cbConjuntoRi.getSelectedIndex() == 0) 
                 listaRi = SimulacionDatos.getInstancia().getConjunto1RiEn();
             else 
                 listaRi = SimulacionDatos.getInstancia().getConjunto2RiSn();
                 
-            int n = listaRi.size(); // N se toma directamente de la lista
+            int n = listaRi.size(); 
             
             limpiarDatos();
             String sel = (String) cbDistribucion.getSelectedItem();
             SimulacionDatos math = SimulacionDatos.getInstancia();
             
-            // 2. Parsear parámetros de la DISTRIBUCIÓN (No de iteración)
             double p1=0, p2=0, p3=0;
-            if(!txtParam1.getText().isEmpty()) p1 = Double.parseDouble(txtParam1.getText());
-            if(txtParam2.isShowing()) p2 = Double.parseDouble(txtParam2.getText());
-            if(txtParam3.isShowing()) p3 = Double.parseDouble(txtParam3.getText());
+            // Solo parseamos si NO es empírica
+            if (!sel.contains("Empírica")) {
+                if(!txtParam1.getText().isEmpty()) p1 = Double.parseDouble(txtParam1.getText());
+                if(txtParam2.isShowing()) p2 = Double.parseDouble(txtParam2.getText());
+                if(txtParam3.isShowing()) p3 = Double.parseDouble(txtParam3.getText());
+            }
 
             // 3. Transformar TODOS los datos
             for (int i = 0; i < n; i++) {
                 double ri = listaRi.get(i);
                 double xi = 0;
                 
-                if (sel.contains("Uniforme")) {
-                    // X = A + (B-A)Ri
+                if (sel.contains("Empírica Llegadas")) {
+                    // X=3 (<0.151), X=4 (<0.930), X=5 (Resto)
+                    if (ri < 0.151) xi = 3.0;
+                    else if (ri < 0.930) xi = 4.0;
+                    else xi = 5.0;
+                } else if (sel.contains("Empírica Servicio")) {
+                    // X=2 (<0.195), X=3 (<0.954), X=4 (Resto)
+                    if (ri < 0.195) xi = 2.0;
+                    else if (ri < 0.954) xi = 3.0;
+                    else xi = 4.0;
+                } else if (sel.contains("Uniforme")) {
                     xi = math.calcularUniforme(ri, p1, p2); 
                 } else if (sel.contains("Exponencial")) {
                     xi = math.calcularExponencial(ri, p1);
