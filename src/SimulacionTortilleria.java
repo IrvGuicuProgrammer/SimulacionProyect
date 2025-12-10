@@ -1,9 +1,9 @@
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.ItemEvent;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -15,17 +15,15 @@ import java.util.List;
 
 public class SimulacionTortilleria extends JFrame {
 
-    // Colores
+    // Colores (Tema Oscuro)
     private final Color COLOR_FONDO = new Color(15, 15, 20);
     private final Color COLOR_CARD = new Color(30, 30, 40);
     private final Color COLOR_TEXTO = new Color(240, 240, 245);
     private final Color COLOR_BORDE = new Color(50, 55, 65);
     private final Color COLOR_VERDE = new Color(16, 185, 129);
+    private final Color COLOR_HEADER = new Color(25, 25, 35);
 
     // Componentes UI
-    private JComboBox<String> cbDistLlegadas, cbDistServicio;
-    private JPanel panelParamsLlegadas, panelParamsServicio;
-    private JTextField txtLlegP1, txtLlegP2, txtSerP1, txtSerP2;
     private JTextField txtHoraInicio;
     
     // Tabla y Gráfica
@@ -49,6 +47,7 @@ public class SimulacionTortilleria extends JFrame {
         setLayout(new BorderLayout());
         getContentPane().setBackground(COLOR_FONDO);
 
+        // Validar que existan datos antes de iniciar
         if (!SimulacionDatos.getInstancia().hayDatos()) {
             JOptionPane.showMessageDialog(this, "¡Alerta! Faltan datos pseudoaleatorios.", "Error", JOptionPane.WARNING_MESSAGE);
         }
@@ -56,11 +55,6 @@ public class SimulacionTortilleria extends JFrame {
         add(crearPanelSuperior(), BorderLayout.NORTH);
         add(crearPanelCentral(), BorderLayout.CENTER);
         add(crearPanelInferior(), BorderLayout.SOUTH);
-
-        // Inicializar
-        JLabel t1=new JLabel(), t2=new JLabel(), t3=new JLabel(), t4=new JLabel();
-        actualizarInputsParams(cbDistLlegadas, panelParamsLlegadas, t1, txtLlegP1, t2, txtLlegP2);
-        actualizarInputsParams(cbDistServicio, panelParamsServicio, t3, txtSerP1, t4, txtSerP2);
     }
 
     private JPanel crearPanelSuperior() {
@@ -69,19 +63,27 @@ public class SimulacionTortilleria extends JFrame {
         p.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
 
         JLabel t = new JLabel("Simulación del Flujo de Clientes");
-        t.setFont(new Font("SansSerif", Font.BOLD, 22)); t.setForeground(COLOR_TEXTO);
+        t.setFont(new Font("SansSerif", Font.BOLD, 22)); 
+        t.setForeground(COLOR_TEXTO);
         p.add(t, BorderLayout.WEST);
 
         JPanel ctrls = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         ctrls.setBackground(COLOR_FONDO);
         
         JButton btnCsv = new JButton("Cargar CSV Reales");
+        // Estilo simple para botón secundario
+        btnCsv.setBackground(COLOR_CARD);
+        btnCsv.setForeground(COLOR_TEXTO);
+        btnCsv.setFocusPainted(false);
         btnCsv.addActionListener(e -> cargarDatosCSV());
         
-        JLabel lH = new JLabel("Hora Inicio: "); lH.setForeground(Color.GRAY);
+        JLabel lH = new JLabel("Hora Inicio:"); 
+        lH.setForeground(Color.GRAY);
         txtHoraInicio = new JTextField("11:00", 5);
         
-        ctrls.add(btnCsv); ctrls.add(lH); ctrls.add(txtHoraInicio);
+        ctrls.add(btnCsv); 
+        ctrls.add(lH); 
+        ctrls.add(txtHoraInicio);
         p.add(ctrls, BorderLayout.EAST);
         return p;
     }
@@ -90,23 +92,38 @@ public class SimulacionTortilleria extends JFrame {
         JPanel p = new JPanel(new GridBagLayout());
         p.setBackground(COLOR_FONDO);
         GridBagConstraints g = new GridBagConstraints();
-        g.fill = GridBagConstraints.BOTH; g.insets = new Insets(5, 5, 5, 5);
+        g.fill = GridBagConstraints.BOTH; 
+        g.insets = new Insets(5, 5, 5, 5);
+        
+        // --- Panel de Información de Parámetros Fijos ---
+        JPanel panelInfo = new JPanel(new GridLayout(1, 2, 10, 10));
+        panelInfo.setBackground(COLOR_FONDO);
+        
+        panelInfo.add(crearPanelInfoFija("Tiempos de Llegada", "Empírica Fija (Factor Hora Pico)", COLOR_VERDE));
+        panelInfo.add(crearPanelInfoFija("Tiempos de Servicio", "Empírica Fija", COLOR_VERDE));
+        
+        g.gridx=0; g.gridy=0; g.gridwidth=2; g.weightx=1.0;
+        p.add(panelInfo, g);
 
-        // Configuración
-        g.gridx=0; g.gridy=0; g.weightx=0.5;
-        p.add(crearPanelConfigDistribucion("Tiempos de Llegada", true), g);
-        g.gridx=1;
-        p.add(crearPanelConfigDistribucion("Tiempos de Servicio", false), g);
-
-        // Botón
+        // --- Botón de Ejecutar (NEGRO Y RESALTANTE) ---
         g.gridx=0; g.gridy=1; g.gridwidth=2;
-        JButton btn = new JButton("Ejecutar Simulación (Con Factor Hora Pico)");
-        btn.setBackground(COLOR_VERDE); btn.setForeground(Color.WHITE);
+        
+        JButton btn = new JButton("EJECUTAR SIMULACIÓN (Con Factor Hora Pico)");
+        btn.setBackground(Color.BLACK); // Color Negro solicitado
+        btn.setForeground(COLOR_VERDE); // Texto Verde Neón para resaltar
         btn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        btn.setFocusPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        // Borde verde para hacerlo más "resaltante"
+        btn.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(COLOR_VERDE, 2),
+            BorderFactory.createEmptyBorder(10, 0, 10, 0)
+        ));
+        
         btn.addActionListener(e -> ejecutarSimulacion());
         p.add(btn, g);
 
-        // Resultados
+        // --- Resultados (Tabla y Gráfica) ---
         g.gridy=2; g.weighty=1.0;
         tabbedPaneResultados = new JTabbedPane();
         tabbedPaneResultados.addTab("Tabla Simular", crearPanelTabla());
@@ -116,51 +133,88 @@ public class SimulacionTortilleria extends JFrame {
         return p;
     }
 
-    private JPanel crearPanelInferior() {
-        JPanel p = new JPanel(new FlowLayout(FlowLayout.RIGHT)); p.setBackground(COLOR_FONDO);
-        JButton btn = new JButton("Volver");
-        btn.addActionListener(e -> dispose());
-        p.add(btn); return p;
-    }
-
-    private JPanel crearPanelConfigDistribucion(String tit, boolean esLleg) {
+    private JPanel crearPanelInfoFija(String tit, String desc, Color color) {
         JPanel p = new JPanel(new BorderLayout());
         p.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(COLOR_BORDE), tit));
-        p.setBackground(COLOR_CARD); ((TitledBorder)p.getBorder()).setTitleColor(COLOR_TEXTO);
-
-        JComboBox<String> cb = new JComboBox<>(new String[]{"Empírica (Datos Excel)", "Exponencial", "Uniforme", "Normal"});
-        JPanel pIn = new JPanel(); pIn.setLayout(new BoxLayout(pIn, BoxLayout.Y_AXIS)); pIn.setBackground(COLOR_CARD);
+        p.setBackground(COLOR_CARD); 
+        ((TitledBorder)p.getBorder()).setTitleColor(COLOR_TEXTO);
+        p.setPreferredSize(new Dimension(0, 80));
         
-        JLabel l1=new JLabel(), l2=new JLabel(); JTextField t1=new JTextField(), t2=new JTextField();
-        if(esLleg) { cbDistLlegadas=cb; panelParamsLlegadas=pIn; txtLlegP1=t1; txtLlegP2=t2; }
-        else { cbDistServicio=cb; panelParamsServicio=pIn; txtSerP1=t1; txtSerP2=t2; }
-
-        cb.addItemListener(e -> { if(e.getStateChange()==ItemEvent.SELECTED) actualizarInputsParams(cb, pIn, l1, t1, l2, t2); });
-        p.add(cb, BorderLayout.NORTH); p.add(pIn, BorderLayout.CENTER);
+        JLabel l = new JLabel("<html><b>Distribución:</b><br>" + desc + "</html>");
+        l.setForeground(color); 
+        l.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        p.add(l, BorderLayout.CENTER);
         return p;
     }
 
-    private void actualizarInputsParams(JComboBox cb, JPanel p, JLabel l1, JTextField t1, JLabel l2, JTextField t2) {
-        p.removeAll();
-        String sel = (String)cb.getSelectedItem();
-        if(sel.contains("Empírica")) {
-            JLabel l = new JLabel("<html>Datos fijos ajustados<br>para Hora Pico</html>"); 
-            l.setForeground(COLOR_VERDE); p.add(l);
-            t1.setText("0"); t2.setText("0");
-        } else {
-            l1.setText("Param 1:"); l2.setText("Param 2:");
-            p.add(l1); p.add(t1); p.add(l2); p.add(t2);
-        }
-        p.revalidate(); p.repaint();
+    private JPanel crearPanelInferior() {
+        JPanel p = new JPanel(new FlowLayout(FlowLayout.RIGHT)); 
+        p.setBackground(COLOR_FONDO);
+        
+        JButton btn = new JButton("Volver");
+        btn.setBackground(COLOR_CARD);
+        btn.setForeground(COLOR_TEXTO);
+        btn.setFocusPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        // CORRECCIÓN: Volver al menú principal en lugar de solo cerrar
+        btn.addActionListener(e -> {
+            new MenuPrincipal().setVisible(true);
+            this.dispose();
+        });
+        
+        p.add(btn); 
+        return p;
     }
 
     private JPanel crearPanelTabla() {
         JPanel p = new JPanel(new BorderLayout());
+        p.setBackground(COLOR_CARD); 
+        
         String[] h = {"#", "Ri(L)", "T.Lleg", "Hora Lleg", "Ri(S)", "T.Serv", "Inicio", "Fin", "Cola", "Ocio"};
-        modeloTabla = new DefaultTableModel(h, 0);
+        modeloTabla = new DefaultTableModel(h, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        
         tablaSimulacion = new JTable(modeloTabla);
-        p.add(new JScrollPane(tablaSimulacion));
+        estilizarTabla(tablaSimulacion); // Aplicar estilo oscuro
+
+        JScrollPane scroll = new JScrollPane(tablaSimulacion);
+        scroll.getViewport().setBackground(COLOR_CARD);
+        scroll.setBorder(BorderFactory.createLineBorder(COLOR_BORDE));
+        
+        p.add(scroll, BorderLayout.CENTER);
         return p;
+    }
+    
+    private void estilizarTabla(JTable t) {
+        // Estilo general oscuro
+        t.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        t.setBackground(COLOR_CARD);
+        t.setForeground(COLOR_TEXTO);
+        t.setGridColor(COLOR_BORDE);
+        t.setRowHeight(30);
+        t.setShowVerticalLines(true);
+        t.setShowHorizontalLines(true);
+        
+        // Estilo del Encabezado
+        t.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 14));
+        t.getTableHeader().setBackground(COLOR_HEADER);
+        t.getTableHeader().setForeground(COLOR_TEXTO);
+        t.getTableHeader().setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, COLOR_BORDE));
+        
+        // Centrar contenido
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+        centerRenderer.setHorizontalAlignment(JLabel.CENTER);
+        centerRenderer.setBackground(COLOR_CARD);
+        centerRenderer.setForeground(COLOR_TEXTO);
+        
+        for(int i=0; i<t.getColumnCount(); i++){
+            t.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
+        }
     }
 
     private JPanel crearPanelGrafica() {
@@ -174,7 +228,10 @@ public class SimulacionTortilleria extends JFrame {
 
     private void ejecutarSimulacion() {
         SimulacionDatos datos = SimulacionDatos.getInstancia();
-        if (!datos.hayDatos()) return;
+        if (!datos.hayDatos()) {
+             JOptionPane.showMessageDialog(this, "Primero debes generar números pseudoaleatorios.", "Sin Datos", JOptionPane.WARNING_MESSAGE);
+             return;
+        }
 
         modeloTabla.setRowCount(0);
         List<Double> rL = datos.getConjunto1RiEn();
@@ -183,13 +240,10 @@ public class SimulacionTortilleria extends JFrame {
         List<EventoSistema> eventosSimul = new ArrayList<>();
 
         try {
-            Parametros pLleg = getParams(cbDistLlegadas, txtLlegP1, txtLlegP2);
-            Parametros pServ = getParams(cbDistServicio, txtSerP1, txtSerP2);
             double horaBase = parsearHoraSimple(txtHoraInicio.getText());
             panelGraficaComparativa.setHoraInicio((int)horaBase);
 
             // Definir ventana de HORA PICO (simulada)
-            // Empieza 60 minutos después del inicio y dura 90 minutos
             double inicioPico = horaBase + 60;
             double finPico = horaBase + 150;
 
@@ -201,15 +255,14 @@ public class SimulacionTortilleria extends JFrame {
                 double riL = rL.get(i);
                 
                 // 2. Calcular Tiempo de Llegada Base
-                double tLlegBase = pLleg.empirica ? getEmpiricaLlegadas(riL) : calcVar(riL, pLleg);
+                double tLlegBase = getEmpiricaLlegadas(riL);
                 
                 // --- LÓGICA DE HORA PICO ---
-                // Si la hora actual está en la franja pico, reducimos el tiempo de llegada (más gente)
                 double factorPico = 1.0;
                 if (acumLleg >= inicioPico && acumLleg <= finPico) {
-                    factorPico = 0.5; // La gente llega al DOBLE de velocidad (tiempo / 2)
+                    factorPico = 0.5; // Acelerar llegadas
                 } else if (acumLleg > finPico) {
-                    factorPico = 1.2; // Después del pico, se calma un poco más de lo normal
+                    factorPico = 1.2; // Desacelerar llegadas
                 }
                 
                 double tLlegReal = tLlegBase * factorPico;
@@ -217,13 +270,13 @@ public class SimulacionTortilleria extends JFrame {
 
                 // 3. Calcular Tiempo de Servicio
                 double riS = rS.get(i);
-                double tServ = pServ.empirica ? getEmpiricaServicio(riS) : calcVar(riS, pServ);
+                double tServ = getEmpiricaServicio(riS);
 
                 // 4. Lógica Tabular
                 double iniServ = Math.max(acumLleg, finAnt);
                 double finServ = iniServ + tServ;
                 
-                // 5. Generar Eventos para la Gráfica
+                // 5. Generar Eventos
                 eventosSimul.add(new EventoSistema(acumLleg - horaBase, 1));
                 eventosSimul.add(new EventoSistema(finServ - horaBase, -1));
 
@@ -235,7 +288,7 @@ public class SimulacionTortilleria extends JFrame {
                 finAnt = finServ;
             }
             
-            // 6. Calcular curva y actualizar gráfica
+            // 6. Actualizar gráfica
             ocupacionSimulada = calcularCurvaOcupacion(eventosSimul);
             panelGraficaComparativa.setDatos(ocupacionReal, ocupacionSimulada);
             tabbedPaneResultados.setSelectedIndex(1);
@@ -291,37 +344,18 @@ public class SimulacionTortilleria extends JFrame {
 
     // --- TRANSFORMADAS INVERSAS AJUSTADAS PARA PICO ---
     private double getEmpiricaLlegadas(double r) {
-        // Ajustado: Tiempos más cortos para facilitar la aglomeración
-        // Originalmente tenías 3, 4, 5. Los bajé a 2, 3, 4.
         if(r < 0.151) return 2.0;
         if(r < 0.930) return 3.0;
         return 4.0;
     }
     private double getEmpiricaServicio(double r) {
-        // Ajustado: El servicio se mantiene o es ligeramente más lento que la llegada
-        // Tiempos: 2, 3, 4 (Igual que llegadas, pero con el factor pico, las llegadas serán de 1.0 a 2.0)
         if(r < 0.195) return 2.0;
         if(r < 0.954) return 3.0;
         return 4.0;
     }
     
-    private double calcVar(double r, Parametros p) {
-        SimulacionDatos m = SimulacionDatos.getInstancia();
-        switch(p.tipo){
-            case "Exponencial": return m.calcularExponencial(r, p.p1);
-            case "Uniforme": return m.calcularUniforme(r, p.p1, p.p2);
-            case "Normal": return m.calcularNormal(r, p.p1, p.p2);
-            default: return 0;
-        }
-    }
-
     // Helpers
-    private Parametros getParams(JComboBox c, JTextField t1, JTextField t2) {
-        double v1=0, v2=0; try{v1=Double.parseDouble(t1.getText()); v2=Double.parseDouble(t2.getText());}catch(Exception e){}
-        return new Parametros((String)c.getSelectedItem(), v1, v2);
-    }
     private double parsearHora(String s) { String[] p=s.split(":"); return Double.parseDouble(p[0])*60+Double.parseDouble(p[1]); }
     private double parsearHoraSimple(String s) { return parsearHora(s+":00"); }
     private String min2Hora(double m) { int t=(int)Math.round(m); return String.format("%02d:%02d", (t/60)%24, t%60); }
-    private static class Parametros { String tipo; double p1, p2; boolean empirica; Parametros(String t, double a, double b){tipo=t; p1=a; p2=b; empirica=t.contains("Empírica");}}
 }

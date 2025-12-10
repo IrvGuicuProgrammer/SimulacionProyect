@@ -443,8 +443,7 @@ public class Pseudoaleatorios extends JFrame {
             ejecutarPruebas(1);
         });
         
-        JButton btnPruebasAmbos = crearBoton("Pruebas Ambos", COLOR_EXITO, false);
-        btnPruebasAmbos.addActionListener(e -> ejecutarPruebasAmbos());
+    
         
         JButton btnLimpiar = crearBoton("Limpiar", COLOR_ERROR, false);
         btnLimpiar.addActionListener(e -> limpiar());
@@ -458,7 +457,6 @@ public class Pseudoaleatorios extends JFrame {
         panel.add(btnGenerar);
         panel.add(btnPruebas1);
         panel.add(btnPruebas2);
-        panel.add(btnPruebasAmbos);
         panel.add(btnLimpiar);
         panel.add(btnVolver);
         
