@@ -1,14 +1,12 @@
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ItemEvent;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
-import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -102,8 +100,9 @@ public class SimulacionTortilleria extends JFrame {
 
         // Botón
         g.gridx=0; g.gridy=1; g.gridwidth=2;
-        JButton btn = new JButton("Ejecutar Simulación");
+        JButton btn = new JButton("Ejecutar Simulación (Con Factor Hora Pico)");
         btn.setBackground(COLOR_VERDE); btn.setForeground(Color.WHITE);
+        btn.setFont(new Font("SansSerif", Font.BOLD, 14));
         btn.addActionListener(e -> ejecutarSimulacion());
         p.add(btn, g);
 
@@ -145,7 +144,8 @@ public class SimulacionTortilleria extends JFrame {
         p.removeAll();
         String sel = (String)cb.getSelectedItem();
         if(sel.contains("Empírica")) {
-            JLabel l = new JLabel("Probabilidades del Excel"); l.setForeground(COLOR_VERDE); p.add(l);
+            JLabel l = new JLabel("<html>Datos fijos ajustados<br>para Hora Pico</html>"); 
+            l.setForeground(COLOR_VERDE); p.add(l);
             t1.setText("0"); t2.setText("0");
         } else {
             l1.setText("Param 1:"); l2.setText("Param 2:");
@@ -188,40 +188,61 @@ public class SimulacionTortilleria extends JFrame {
             double horaBase = parsearHoraSimple(txtHoraInicio.getText());
             panelGraficaComparativa.setHoraInicio((int)horaBase);
 
+            // Definir ventana de HORA PICO (simulada)
+            // Empieza 60 minutos después del inicio y dura 90 minutos
+            double inicioPico = horaBase + 60;
+            double finPico = horaBase + 150;
+
             double finAnt = horaBase;
             double acumLleg = horaBase;
 
             for (int i = 0; i < N; i++) {
-                // 1. Calcular Tiempos usando Transformada Inversa
+                // 1. Obtener Ri
                 double riL = rL.get(i);
-                double tLleg = pLleg.empirica ? getEmpiricaLlegadas(riL) : calcVar(riL, pLleg);
-                acumLleg += tLleg;
+                
+                // 2. Calcular Tiempo de Llegada Base
+                double tLlegBase = pLleg.empirica ? getEmpiricaLlegadas(riL) : calcVar(riL, pLleg);
+                
+                // --- LÓGICA DE HORA PICO ---
+                // Si la hora actual está en la franja pico, reducimos el tiempo de llegada (más gente)
+                double factorPico = 1.0;
+                if (acumLleg >= inicioPico && acumLleg <= finPico) {
+                    factorPico = 0.5; // La gente llega al DOBLE de velocidad (tiempo / 2)
+                } else if (acumLleg > finPico) {
+                    factorPico = 1.2; // Después del pico, se calma un poco más de lo normal
+                }
+                
+                double tLlegReal = tLlegBase * factorPico;
+                acumLleg += tLlegReal;
 
+                // 3. Calcular Tiempo de Servicio
                 double riS = rS.get(i);
                 double tServ = pServ.empirica ? getEmpiricaServicio(riS) : calcVar(riS, pServ);
 
-                // 2. Lógica Tabular
+                // 4. Lógica Tabular
                 double iniServ = Math.max(acumLleg, finAnt);
                 double finServ = iniServ + tServ;
                 
-                // 3. Generar Eventos para la Gráfica (Esto crea la subida y bajada)
-                // Cliente llega -> Sube ocupación (+1)
+                // 5. Generar Eventos para la Gráfica
                 eventosSimul.add(new EventoSistema(acumLleg - horaBase, 1));
-                // Cliente se va -> Baja ocupación (-1)
                 eventosSimul.add(new EventoSistema(finServ - horaBase, -1));
 
                 modeloTabla.addRow(new Object[]{
-                    i+1, dfRi.format(riL), dfTime.format(tLleg), min2Hora(acumLleg),
+                    i+1, dfRi.format(riL), dfTime.format(tLlegReal), min2Hora(acumLleg),
                     dfRi.format(riS), dfTime.format(tServ), min2Hora(iniServ), min2Hora(finServ),
                     dfTime.format(iniServ-acumLleg), dfTime.format(iniServ-finAnt)
                 });
                 finAnt = finServ;
             }
             
-            // 4. Calcular curva y actualizar gráfica
+            // 6. Calcular curva y actualizar gráfica
             ocupacionSimulada = calcularCurvaOcupacion(eventosSimul);
             panelGraficaComparativa.setDatos(ocupacionReal, ocupacionSimulada);
             tabbedPaneResultados.setSelectedIndex(1);
+
+            JOptionPane.showMessageDialog(this, 
+                "Simulación completada.\nSe aplicó un factor de aceleración de llegadas entre " + 
+                min2Hora(inicioPico) + " y " + min2Hora(finPico) + " para simular la Hora Pico.");
 
         } catch (Exception e) { e.printStackTrace(); }
     }
@@ -254,7 +275,7 @@ public class SimulacionTortilleria extends JFrame {
         }
     }
 
-    // --- CÁLCULO DE OCUPACIÓN (Algoritmo de la montaña) ---
+    // --- CÁLCULO DE OCUPACIÓN ---
     private List<double[]> calcularCurvaOcupacion(List<EventoSistema> evs) {
         Collections.sort(evs, Comparator.comparingDouble(e -> e.t));
         List<double[]> curva = new ArrayList<>();
@@ -268,17 +289,22 @@ public class SimulacionTortilleria extends JFrame {
     }
     private static class EventoSistema { double t; int tipo; EventoSistema(double x, int y){t=x; tipo=y;} }
 
-    // --- TRANSFORMADAS INVERSAS (Datos del Excel) ---
+    // --- TRANSFORMADAS INVERSAS AJUSTADAS PARA PICO ---
     private double getEmpiricaLlegadas(double r) {
-        if(r < 0.151) return 3.0;
-        if(r < 0.930) return 4.0;
-        return 5.0;
+        // Ajustado: Tiempos más cortos para facilitar la aglomeración
+        // Originalmente tenías 3, 4, 5. Los bajé a 2, 3, 4.
+        if(r < 0.151) return 2.0;
+        if(r < 0.930) return 3.0;
+        return 4.0;
     }
     private double getEmpiricaServicio(double r) {
+        // Ajustado: El servicio se mantiene o es ligeramente más lento que la llegada
+        // Tiempos: 2, 3, 4 (Igual que llegadas, pero con el factor pico, las llegadas serán de 1.0 a 2.0)
         if(r < 0.195) return 2.0;
         if(r < 0.954) return 3.0;
         return 4.0;
     }
+    
     private double calcVar(double r, Parametros p) {
         SimulacionDatos m = SimulacionDatos.getInstancia();
         switch(p.tipo){
