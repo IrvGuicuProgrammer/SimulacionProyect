@@ -2,7 +2,6 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.ItemEvent;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -21,18 +20,13 @@ public class TransformadasInversas extends JFrame {
 
     // Componentes
     private JComboBox<String> cbConjuntoRi;
-    private JComboBox<String> cbDistribucion;
     private JLabel lblCantidadDatos; 
-    private JTextField txtParam1, txtParam2, txtParam3;
-    private JLabel lblParam1, lblParam2, lblParam3;
-    private JPanel panelInputsDinamicos;
-    private JTable tablaResultados;
+    private JLabel lblInfoMetodo;
     private DefaultTableModel modeloTabla;
     private PanelGraficaHistograma panelGrafica;
     
     // Datos
     private List<Double> datosSimulados;
-    private List<Double> datosRiUtilizados;
 
     public TransformadasInversas() {
         setTitle("Transformadas Inversas - Generación de Variables Aleatorias");
@@ -50,14 +44,13 @@ public class TransformadasInversas extends JFrame {
         }
 
         datosSimulados = new ArrayList<>();
-        datosRiUtilizados = new ArrayList<>();
 
         add(crearPanelSuperior(), BorderLayout.NORTH);
         add(crearPanelCentral(), BorderLayout.CENTER);
         add(crearPanelInferior(), BorderLayout.SOUTH);
         
-        actualizarCamposInputs();
         actualizarContadorDatos(); 
+        actualizarInfoMetodo(); // Mostrar info inicial
     }
 
     private JPanel crearPanelSuperior() {
@@ -119,43 +112,33 @@ public class TransformadasInversas extends JFrame {
         contenido.add(crearLabel("Fuente de Datos (Ri):"));
         cbConjuntoRi = new JComboBox<>(new String[]{"Conjunto 1 (Entradas)", "Conjunto 2 (Salidas)"});
         estilizarCombo(cbConjuntoRi);
-        cbConjuntoRi.addItemListener(e -> actualizarContadorDatos()); 
+        cbConjuntoRi.addItemListener(e -> {
+            actualizarContadorDatos();
+            actualizarInfoMetodo();
+        }); 
         contenido.add(cbConjuntoRi);
         contenido.add(Box.createRigidArea(new Dimension(0, 10)));
         
+        // Indicador de datos
         lblCantidadDatos = new JLabel("Cargando datos...");
         lblCantidadDatos.setFont(new Font("Inter", Font.ITALIC, 12));
         lblCantidadDatos.setForeground(COLOR_GRAFICA_BARRA); 
         contenido.add(lblCantidadDatos);
-        contenido.add(Box.createRigidArea(new Dimension(0, 20)));
+        contenido.add(Box.createRigidArea(new Dimension(0, 25)));
 
-        // Selector Distribución con opciones EMPÍRICAS agregadas
-        contenido.add(crearLabel("Transformar a Distribución:"));
-        cbDistribucion = new JComboBox<>(new String[]{
-            "Empírica Llegadas (Excel)",
-            "Empírica Servicio (Excel)",
-            "Uniforme (A, B)", 
-            "Exponencial (Media)", 
-            "Normal (Media, Desv.Est)", 
-            "Triangular (Min, Max, Moda)"
-        });
-        estilizarCombo(cbDistribucion);
-        cbDistribucion.addItemListener(e -> {
-            if (e.getStateChange() == ItemEvent.SELECTED) actualizarCamposInputs();
-        });
-        contenido.add(cbDistribucion);
-        contenido.add(Box.createRigidArea(new Dimension(0, 20)));
+        // Información de la lógica aplicada (Sin inputs manuales)
+        JLabel lblLogica = crearLabel("");
+        lblLogica.setForeground(COLOR_PRIMARIO);
+        contenido.add(lblLogica);
+        contenido.add(Box.createRigidArea(new Dimension(0, 10)));
 
-        // Parámetros Dinámicos
-        panelInputsDinamicos = new JPanel();
-        panelInputsDinamicos.setLayout(new BoxLayout(panelInputsDinamicos, BoxLayout.Y_AXIS));
-        panelInputsDinamicos.setBackground(COLOR_CARD);
+        lblInfoMetodo = new JLabel();
+        lblInfoMetodo.setFont(new Font("Inter", Font.PLAIN, 13));
+        lblInfoMetodo.setForeground(COLOR_TEXTO);
+        // Permitir múltiples líneas en el label
+        lblInfoMetodo.setText("<html>Se aplicará la distribución empírica<br>correspondiente a este conjunto.</html>");
+        contenido.add(lblInfoMetodo);
         
-        lblParam1 = crearLabel("Parámetro 1:"); txtParam1 = crearInput("");
-        lblParam2 = crearLabel("Parámetro 2:"); txtParam2 = crearInput("");
-        lblParam3 = crearLabel("Parámetro 3:"); txtParam3 = crearInput("");
-        
-        contenido.add(panelInputsDinamicos);
         contenido.add(Box.createVerticalGlue());
 
         // Botón
@@ -173,14 +156,23 @@ public class TransformadasInversas extends JFrame {
             lblCantidadDatos.setText("Sin datos disponibles (N=0)");
             return;
         }
-        
         int n;
         if (cbConjuntoRi.getSelectedIndex() == 0) {
             n = SimulacionDatos.getInstancia().getConjunto1RiEn().size();
         } else {
             n = SimulacionDatos.getInstancia().getConjunto2RiSn().size();
         }
-        lblCantidadDatos.setText("✓ Se procesarán " + n + " registros automáticamente");
+        lblCantidadDatos.setText("✓ Datos disponibles: " + n);
+    }
+
+    private void actualizarInfoMetodo() {
+        if (cbConjuntoRi.getSelectedIndex() == 0) {
+            // Conjunto 1: Entradas -> Llegadas
+            lblInfoMetodo.setText("");
+        } else {
+            // Conjunto 2: Salidas -> Servicio
+            lblInfoMetodo.setText("");
+        }
     }
 
     private JPanel crearPanelTabla() {
@@ -192,11 +184,11 @@ public class TransformadasInversas extends JFrame {
         lblTitulo.setForeground(COLOR_TEXTO);
         lblTitulo.setBorder(BorderFactory.createEmptyBorder(20, 20, 10, 20));
         
-        String[] columnas = {"#", "Ri (Origen)", "Xi (Transformado)"};
+        String[] columnas = {"#", "Ri (Origen)", "Xi (Calculado)"};
         modeloTabla = new DefaultTableModel(columnas, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
-        tablaResultados = new JTable(modeloTabla);
+        JTable tablaResultados = new JTable(modeloTabla);
         estilizarTabla(tablaResultados);
         
         JScrollPane scroll = new JScrollPane(tablaResultados);
@@ -234,36 +226,7 @@ public class TransformadasInversas extends JFrame {
         return panel;
     }
 
-    // --- LÓGICA ---
-    private void actualizarCamposInputs() {
-        panelInputsDinamicos.removeAll();
-        String sel = (String) cbDistribucion.getSelectedItem();
-        
-        if (sel.contains("Empírica")) {
-             JLabel lblInfo = crearLabel("<html>Probabilidades fijas cargadas<br>desde el archivo Excel.</html>");
-             lblInfo.setForeground(COLOR_GRAFICA_BARRA);
-             panelInputsDinamicos.add(lblInfo);
-        } else if (sel.contains("Uniforme")) {
-            agregarCampo(lblParam1, txtParam1, "Límite A (Mín):", "0");
-            agregarCampo(lblParam2, txtParam2, "Límite B (Máx):", "10");
-        } else if (sel.contains("Exponencial")) {
-            agregarCampo(lblParam1, txtParam1, "Media (μ):", "5");
-        } else if (sel.contains("Normal")) {
-            agregarCampo(lblParam1, txtParam1, "Media (μ):", "100");
-            agregarCampo(lblParam2, txtParam2, "Desv. Est (σ):", "15");
-        } else if (sel.contains("Triangular")) {
-            agregarCampo(lblParam1, txtParam1, "Mín (a):", "10");
-            agregarCampo(lblParam2, txtParam2, "Máx (b):", "30");
-            agregarCampo(lblParam3, txtParam3, "Moda (c):", "25");
-        }
-        panelInputsDinamicos.revalidate(); panelInputsDinamicos.repaint();
-    }
-    
-    private void agregarCampo(JLabel lbl, JTextField txt, String t, String v) {
-        lbl.setText(t); txt.setText(v);
-        panelInputsDinamicos.add(lbl); panelInputsDinamicos.add(txt);
-        panelInputsDinamicos.add(Box.createRigidArea(new Dimension(0, 15)));
-    }
+    // --- LÓGICA PRINCIPAL AUTOMATIZADA ---
 
     private void generarVariables() {
         if (!SimulacionDatos.getInstancia().hayDatos()) {
@@ -272,70 +235,55 @@ public class TransformadasInversas extends JFrame {
         }
         
         try {
+            // 1. Obtener lista seleccionada
             List<Double> listaRi;
-            if (cbConjuntoRi.getSelectedIndex() == 0) 
+            boolean esConjunto1 = (cbConjuntoRi.getSelectedIndex() == 0);
+            
+            if (esConjunto1) 
                 listaRi = SimulacionDatos.getInstancia().getConjunto1RiEn();
             else 
                 listaRi = SimulacionDatos.getInstancia().getConjunto2RiSn();
                 
             int n = listaRi.size(); 
-            
             limpiarDatos();
-            String sel = (String) cbDistribucion.getSelectedItem();
-            SimulacionDatos math = SimulacionDatos.getInstancia();
             
-            double p1=0, p2=0, p3=0;
-            // Solo parseamos si NO es empírica
-            if (!sel.contains("Empírica")) {
-                if(!txtParam1.getText().isEmpty()) p1 = Double.parseDouble(txtParam1.getText());
-                if(txtParam2.isShowing()) p2 = Double.parseDouble(txtParam2.getText());
-                if(txtParam3.isShowing()) p3 = Double.parseDouble(txtParam3.getText());
-            }
-
-            // 3. Transformar TODOS los datos
+            // 2. Transformar TODOS los datos automáticamente
             for (int i = 0; i < n; i++) {
                 double ri = listaRi.get(i);
-                double xi = 0;
+                double xi;
                 
-                if (sel.contains("Empírica Llegadas")) {
-                    // X=3 (<0.151), X=4 (<0.930), X=5 (Resto)
-                    if (ri < 0.151) xi = 3.0;
-                    else if (ri < 0.930) xi = 4.0;
-                    else xi = 5.0;
-                } else if (sel.contains("Empírica Servicio")) {
-                    // X=2 (<0.195), X=3 (<0.954), X=4 (Resto)
+                // LÓGICA EMPÍRICA AUTOMÁTICA
+                if (esConjunto1) {
+                    // Lógica para LLEGADAS (Conjunto 1)
+                    if (ri < 0.151) xi = 2.0;
+                    else if (ri < 0.930) xi = 3.0;
+                    else xi = 4.0;
+                } else {
+                    // Lógica para SERVICIO (Conjunto 2)
                     if (ri < 0.195) xi = 2.0;
                     else if (ri < 0.954) xi = 3.0;
                     else xi = 4.0;
-                } else if (sel.contains("Uniforme")) {
-                    xi = math.calcularUniforme(ri, p1, p2); 
-                } else if (sel.contains("Exponencial")) {
-                    xi = math.calcularExponencial(ri, p1);
-                } else if (sel.contains("Normal")) {
-                    xi = math.calcularNormal(ri, p1, p2);
-                } else if (sel.contains("Triangular")) {
-                    double a=p1, b=p2, c=p3;
-                    double corte = (c-a)/(b-a);
-                    if (ri < corte) xi = a + Math.sqrt(ri*(b-a)*(c-a));
-                    else xi = b - Math.sqrt((1-ri)*(b-a)*(b-c));
                 }
                 
                 datosSimulados.add(xi);
-                datosRiUtilizados.add(ri);
                 
+                // Mostrar en tabla
                 if(i < 5000) modeloTabla.addRow(new Object[]{i+1, String.format("%.5f", ri), String.format("%.4f", xi)});
             }
             
-            panelGrafica.setDatos(datosSimulados, sel);
+            String nombreDist = esConjunto1 ? "Empírica (Llegadas)" : "Empírica (Servicio)";
+            panelGrafica.setDatos(datosSimulados, nombreDist);
             
         } catch(Exception ex) {
-            JOptionPane.showMessageDialog(this, "Verifique los parámetros numéricos de la distribución.", "Error", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error al transformar: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void limpiarDatos() {
-        datosSimulados.clear(); datosRiUtilizados.clear();
-        modeloTabla.setRowCount(0); panelGrafica.limpiar();
+        datosSimulados.clear();
+        modeloTabla.setRowCount(0); 
+        panelGrafica.limpiar();
     }
 
     // --- Helpers UI (Estilos) ---
@@ -347,12 +295,9 @@ public class TransformadasInversas extends JFrame {
         JLabel l = new JLabel(t); l.setFont(new Font("Inter",Font.BOLD,12));
         l.setForeground(COLOR_TEXTO_SECUNDARIO); l.setAlignmentX(Component.LEFT_ALIGNMENT); return l;
     }
-    private JTextField crearInput(String t) {
-        JTextField x = new JTextField(t); x.setFont(new Font("Inter",Font.PLAIN,14));
-        x.setBackground(COLOR_HOVER); x.setForeground(COLOR_TEXTO); x.setCaretColor(COLOR_TEXTO);
-        x.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(COLOR_BORDE),BorderFactory.createEmptyBorder(8,10,8,10)));
-        x.setMaximumSize(new Dimension(Integer.MAX_VALUE,40)); x.setAlignmentX(Component.LEFT_ALIGNMENT); return x;
-    }
+    
+    // NOTA: Se eliminó el método crearInput porque ya no hay inputs manuales
+    
     private void estilizarCombo(JComboBox<String> c) {
         c.setFont(new Font("Inter",Font.PLAIN,14)); c.setBackground(COLOR_HOVER); c.setForeground(Color.WHITE);
         c.setBorder(BorderFactory.createLineBorder(COLOR_BORDE)); c.setMaximumSize(new Dimension(Integer.MAX_VALUE,40)); c.setAlignmentX(Component.LEFT_ALIGNMENT);
