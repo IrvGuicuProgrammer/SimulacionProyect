@@ -3,7 +3,6 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public class TransformadasInversas extends JFrame {
@@ -16,17 +15,15 @@ public class TransformadasInversas extends JFrame {
     private final Color COLOR_TEXTO_SECUNDARIO = new Color(160, 165, 180);
     private final Color COLOR_BORDE = new Color(50, 55, 65);
     private final Color COLOR_HOVER = new Color(40, 45, 55);
-    private final Color COLOR_GRAFICA_BARRA = new Color(16, 185, 129); // Verde
-
-    // Componentes
-    private JComboBox<String> cbConjuntoRi;
-    private JLabel lblCantidadDatos; 
-    private JLabel lblInfoMetodo;
-    private DefaultTableModel modeloTabla;
-    private PanelGraficaHistograma panelGrafica;
     
-    // Datos
-    private List<Double> datosSimulados;
+    // Componentes
+    private JLabel lblCantidadDatos; 
+    private DefaultTableModel modeloTabla1; // Llegadas
+    private DefaultTableModel modeloTabla2; // Servicio
+    
+    // Datos calculados (opcional si se quieren guardar)
+    private List<Double> transformadosLlegadas;
+    private List<Double> transformadosServicio;
 
     public TransformadasInversas() {
         setTitle("Transformadas Inversas - Generación de Variables Aleatorias");
@@ -43,14 +40,14 @@ public class TransformadasInversas extends JFrame {
                 "Sin Datos", JOptionPane.WARNING_MESSAGE);
         }
 
-        datosSimulados = new ArrayList<>();
+        transformadosLlegadas = new ArrayList<>();
+        transformadosServicio = new ArrayList<>();
 
         add(crearPanelSuperior(), BorderLayout.NORTH);
         add(crearPanelCentral(), BorderLayout.CENTER);
         add(crearPanelInferior(), BorderLayout.SOUTH);
         
         actualizarContadorDatos(); 
-        actualizarInfoMetodo(); // Mostrar info inicial
     }
 
     private JPanel crearPanelSuperior() {
@@ -62,7 +59,7 @@ public class TransformadasInversas extends JFrame {
         titulo.setFont(new Font("Inter", Font.BOLD, 24));
         titulo.setForeground(COLOR_TEXTO);
 
-        JLabel subtitulo = new JLabel("Simulación automática basada en los números pseudoaleatorios generados previamente");
+        JLabel subtitulo = new JLabel("Simulación automática de Tiempos de Llegada y Servicio basada en Ri");
         subtitulo.setFont(new Font("Inter", Font.PLAIN, 14));
         subtitulo.setForeground(COLOR_TEXTO_SECUNDARIO);
 
@@ -84,17 +81,17 @@ public class TransformadasInversas extends JFrame {
         gbc.fill = GridBagConstraints.BOTH;
         gbc.insets = new Insets(0, 0, 0, 20);
 
-        // Configuración (Izquierda)
-        gbc.weightx = 0.25; gbc.weighty = 1.0; gbc.gridx = 0;
+        // Panel de Configuración (Izquierda - más estrecho)
+        gbc.weightx = 0.20; 
+        gbc.weighty = 1.0; 
+        gbc.gridx = 0;
         panel.add(crearPanelConfiguracion(), gbc);
 
-        // Tabla (Centro)
-        gbc.weightx = 0.30; gbc.gridx = 1;
-        panel.add(crearPanelTabla(), gbc);
-
-        // Gráfica (Derecha)
-        gbc.weightx = 0.45; gbc.insets = new Insets(0, 0, 0, 0); gbc.gridx = 2;
-        panel.add(crearPanelGrafica(), gbc);
+        // Panel de Tablas (Derecha - ocupa el resto)
+        gbc.weightx = 0.80; 
+        gbc.insets = new Insets(0, 0, 0, 0); 
+        gbc.gridx = 1;
+        panel.add(crearPanelTablas(), gbc);
 
         return panel;
     }
@@ -108,41 +105,28 @@ public class TransformadasInversas extends JFrame {
         contenido.setBackground(COLOR_CARD);
         contenido.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Selector de Conjunto
-        contenido.add(crearLabel("Fuente de Datos (Ri):"));
-        cbConjuntoRi = new JComboBox<>(new String[]{"Conjunto 1 (Entradas)", "Conjunto 2 (Salidas)"});
-        estilizarCombo(cbConjuntoRi);
-        cbConjuntoRi.addItemListener(e -> {
-            actualizarContadorDatos();
-            actualizarInfoMetodo();
-        }); 
-        contenido.add(cbConjuntoRi);
+        // Indicador de datos
+        contenido.add(crearLabel("Estado de Datos:"));
         contenido.add(Box.createRigidArea(new Dimension(0, 10)));
         
-        // Indicador de datos
-        lblCantidadDatos = new JLabel("Cargando datos...");
-        lblCantidadDatos.setFont(new Font("Inter", Font.ITALIC, 12));
-        lblCantidadDatos.setForeground(COLOR_GRAFICA_BARRA); 
+        lblCantidadDatos = new JLabel("Cargando...");
+        lblCantidadDatos.setFont(new Font("Inter", Font.ITALIC, 13));
+        lblCantidadDatos.setForeground(COLOR_PRIMARIO); 
         contenido.add(lblCantidadDatos);
-        contenido.add(Box.createRigidArea(new Dimension(0, 25)));
+        contenido.add(Box.createRigidArea(new Dimension(0, 30)));
 
-        // Información de la lógica aplicada (Sin inputs manuales)
-        JLabel lblLogica = crearLabel("");
-        lblLogica.setForeground(COLOR_PRIMARIO);
-        contenido.add(lblLogica);
-        contenido.add(Box.createRigidArea(new Dimension(0, 10)));
-
-        lblInfoMetodo = new JLabel();
-        lblInfoMetodo.setFont(new Font("Inter", Font.PLAIN, 13));
-        lblInfoMetodo.setForeground(COLOR_TEXTO);
-        // Permitir múltiples líneas en el label
-        lblInfoMetodo.setText("<html>Se aplicará la distribución empírica<br>correspondiente a este conjunto.</html>");
-        contenido.add(lblInfoMetodo);
+        // Información
+        JLabel lblInfo = new JLabel("<html><body>Se aplicarán distribuciones empíricas a ambos conjuntos:<br><br>" +
+                                    "• <b>Conjunto 1:</b> Tiempos entre Llegadas<br>" +
+                                    "• <b>Conjunto 2:</b> Tiempos de Servicio</body></html>");
+        lblInfo.setFont(new Font("Inter", Font.PLAIN, 13));
+        lblInfo.setForeground(COLOR_TEXTO_SECUNDARIO);
+        contenido.add(lblInfo);
         
         contenido.add(Box.createVerticalGlue());
 
         // Botón
-        JButton btnGenerar = crearBoton("Transformar Datos", COLOR_PRIMARIO, true);
+        JButton btnGenerar = crearBoton("Transformar Todo", COLOR_PRIMARIO, true);
         btnGenerar.addActionListener(e -> generarVariables());
         
         card.add(contenido, BorderLayout.CENTER);
@@ -153,66 +137,72 @@ public class TransformadasInversas extends JFrame {
     
     private void actualizarContadorDatos() {
         if (!SimulacionDatos.getInstancia().hayDatos()) {
-            lblCantidadDatos.setText("Sin datos disponibles (N=0)");
+            lblCantidadDatos.setText("Sin datos Ri (N=0)");
             return;
         }
-        int n;
-        if (cbConjuntoRi.getSelectedIndex() == 0) {
-            n = SimulacionDatos.getInstancia().getConjunto1RiEn().size();
-        } else {
-            n = SimulacionDatos.getInstancia().getConjunto2RiSn().size();
-        }
-        lblCantidadDatos.setText("✓ Datos disponibles: " + n);
+        int n = SimulacionDatos.getInstancia().getNGenerados();
+        lblCantidadDatos.setText("✓ Datos Ri disponibles: " + n);
     }
 
-    private void actualizarInfoMetodo() {
-        if (cbConjuntoRi.getSelectedIndex() == 0) {
-            // Conjunto 1: Entradas -> Llegadas
-            lblInfoMetodo.setText("");
-        } else {
-            // Conjunto 2: Salidas -> Servicio
-            lblInfoMetodo.setText("");
-        }
-    }
+    // --- PANEL DOBLE TABLA ---
+    private JPanel crearPanelTablas() {
+        // Usamos GridLayout para dividir en 2 columnas iguales
+        JPanel panelTablas = new JPanel(new GridLayout(1, 2, 15, 0));
+        panelTablas.setBackground(COLOR_FONDO); // Transparente o fondo base
 
-    private JPanel crearPanelTabla() {
-        JPanel card = new JPanel(new BorderLayout());
-        estilizarCard(card);
+        // --- TABLA 1: LLEGADAS ---
+        JPanel card1 = new JPanel(new BorderLayout());
+        estilizarCard(card1);
         
-        JLabel lblTitulo = new JLabel("Resultados Transformados");
-        lblTitulo.setFont(new Font("Inter", Font.BOLD, 16));
-        lblTitulo.setForeground(COLOR_TEXTO);
-        lblTitulo.setBorder(BorderFactory.createEmptyBorder(20, 20, 10, 20));
+        JLabel lblTitulo1 = new JLabel("Conjunto 1: Llegadas");
+        lblTitulo1.setFont(new Font("Inter", Font.BOLD, 16));
+        lblTitulo1.setForeground(COLOR_TEXTO);
+        lblTitulo1.setBorder(BorderFactory.createEmptyBorder(15, 20, 10, 20));
+        lblTitulo1.setHorizontalAlignment(SwingConstants.CENTER);
         
-        String[] columnas = {"#", "Ri (Origen)", "Xi (Calculado)"};
-        modeloTabla = new DefaultTableModel(columnas, 0) {
+        String[] col1 = {"#", "Ri (Entrada)", "Xi (Llegada)"};
+        modeloTabla1 = new DefaultTableModel(col1, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
-        JTable tablaResultados = new JTable(modeloTabla);
-        estilizarTabla(tablaResultados);
+        JTable tabla1 = new JTable(modeloTabla1);
+        estilizarTabla(tabla1);
         
-        JScrollPane scroll = new JScrollPane(tablaResultados);
-        scroll.setBorder(BorderFactory.createEmptyBorder(0,5,5,5));
-        scroll.getViewport().setBackground(COLOR_CARD);
-        
-        card.add(lblTitulo, BorderLayout.NORTH);
-        card.add(scroll, BorderLayout.CENTER);
-        return card;
-    }
+        JScrollPane scroll1 = new JScrollPane(tabla1);
+        scroll1.setBorder(BorderFactory.createEmptyBorder(0,5,5,5));
+        scroll1.getViewport().setBackground(COLOR_CARD);
 
-    private JPanel crearPanelGrafica() {
-        JPanel card = new JPanel(new BorderLayout());
-        estilizarCard(card);
-        JLabel lblTitulo = new JLabel("Histograma Resultante");
-        lblTitulo.setFont(new Font("Inter", Font.BOLD, 16));
-        lblTitulo.setForeground(COLOR_TEXTO);
-        lblTitulo.setBorder(BorderFactory.createEmptyBorder(20, 20, 10, 20));
+        card1.add(lblTitulo1, BorderLayout.NORTH);
+        card1.add(scroll1, BorderLayout.CENTER);
+
+        // --- TABLA 2: SERVICIO ---
+        JPanel card2 = new JPanel(new BorderLayout());
+        estilizarCard(card2);
         
-        panelGrafica = new PanelGraficaHistograma();
-        panelGrafica.setBackground(COLOR_CARD);
-        card.add(lblTitulo, BorderLayout.NORTH);
-        card.add(panelGrafica, BorderLayout.CENTER);
-        return card;
+        JLabel lblTitulo2 = new JLabel("Conjunto 2: Servicio");
+        lblTitulo2.setFont(new Font("Inter", Font.BOLD, 16));
+        lblTitulo2.setForeground(COLOR_TEXTO);
+        lblTitulo2.setBorder(BorderFactory.createEmptyBorder(15, 20, 10, 20));
+        lblTitulo2.setHorizontalAlignment(SwingConstants.CENTER);
+        
+        String[] col2 = {"#", "Ri (Salida)", "Xi (Servicio)"};
+        modeloTabla2 = new DefaultTableModel(col2, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        JTable tabla2 = new JTable(modeloTabla2);
+        estilizarTabla(tabla2);
+        
+        JScrollPane scroll2 = new JScrollPane(tabla2);
+        scroll2.setBorder(BorderFactory.createEmptyBorder(0,5,5,5));
+        scroll2.getViewport().setBackground(COLOR_CARD);
+
+        card2.add(lblTitulo2, BorderLayout.NORTH);
+        card2.add(scroll2, BorderLayout.CENTER);
+
+        // Agregar al panel contenedor
+        panelTablas.add(card1);
+        panelTablas.add(card2);
+        
+        return panelTablas;
     }
 
     private JPanel crearPanelInferior() {
@@ -226,7 +216,7 @@ public class TransformadasInversas extends JFrame {
         return panel;
     }
 
-    // --- LÓGICA PRINCIPAL AUTOMATIZADA ---
+    // --- LÓGICA PRINCIPAL ---
 
     private void generarVariables() {
         if (!SimulacionDatos.getInstancia().hayDatos()) {
@@ -235,44 +225,40 @@ public class TransformadasInversas extends JFrame {
         }
         
         try {
-            // 1. Obtener lista seleccionada
-            List<Double> listaRi;
-            boolean esConjunto1 = (cbConjuntoRi.getSelectedIndex() == 0);
-            
-            if (esConjunto1) 
-                listaRi = SimulacionDatos.getInstancia().getConjunto1RiEn();
-            else 
-                listaRi = SimulacionDatos.getInstancia().getConjunto2RiSn();
+            List<Double> riLlegadas = SimulacionDatos.getInstancia().getConjunto1RiEn();
+            List<Double> riServicio = SimulacionDatos.getInstancia().getConjunto2RiSn();
                 
-            int n = listaRi.size(); 
+            int n = SimulacionDatos.getInstancia().getNGenerados();
             limpiarDatos();
             
-            // 2. Transformar TODOS los datos automáticamente
+            // Transformar ambos conjuntos
             for (int i = 0; i < n; i++) {
-                double ri = listaRi.get(i);
-                double xi;
+                // --- CONJUNTO 1: LLEGADAS ---
+                double ri1 = riLlegadas.get(i);
+                double xi1;
+                // Lógica Empírica Llegadas
+                if (ri1 < 0.151) xi1 = 2.0;
+                else if (ri1 < 0.930) xi1 = 3.0;
+                else xi1 = 4.0;
+                transformadosLlegadas.add(xi1);
                 
-                // LÓGICA EMPÍRICA AUTOMÁTICA
-                if (esConjunto1) {
-                    // Lógica para LLEGADAS (Conjunto 1)
-                    if (ri < 0.151) xi = 2.0;
-                    else if (ri < 0.930) xi = 3.0;
-                    else xi = 4.0;
-                } else {
-                    // Lógica para SERVICIO (Conjunto 2)
-                    if (ri < 0.195) xi = 2.0;
-                    else if (ri < 0.954) xi = 3.0;
-                    else xi = 4.0;
+                // --- CONJUNTO 2: SERVICIO ---
+                double ri2 = riServicio.get(i);
+                double xi2;
+                // Lógica Empírica Servicio
+                if (ri2 < 0.195) xi2 = 2.0;
+                else if (ri2 < 0.954) xi2 = 3.0;
+                else xi2 = 4.0;
+                transformadosServicio.add(xi2);
+                
+                // Agregar filas (limitamos visualización a 5000 por rendimiento si es necesario)
+                if(i < 5000) {
+                    modeloTabla1.addRow(new Object[]{i+1, String.format("%.5f", ri1), String.format("%.2f min", xi1)});
+                    modeloTabla2.addRow(new Object[]{i+1, String.format("%.5f", ri2), String.format("%.2f min", xi2)});
                 }
-                
-                datosSimulados.add(xi);
-                
-                // Mostrar en tabla
-                if(i < 5000) modeloTabla.addRow(new Object[]{i+1, String.format("%.5f", ri), String.format("%.4f", xi)});
             }
             
-            String nombreDist = esConjunto1 ? "Empírica (Llegadas)" : "Empírica (Servicio)";
-            panelGrafica.setDatos(datosSimulados, nombreDist);
+            JOptionPane.showMessageDialog(this, "¡Transformación completada para ambos conjuntos!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
             
         } catch(Exception ex) {
             ex.printStackTrace();
@@ -281,27 +267,25 @@ public class TransformadasInversas extends JFrame {
     }
 
     private void limpiarDatos() {
-        datosSimulados.clear();
-        modeloTabla.setRowCount(0); 
-        panelGrafica.limpiar();
+        transformadosLlegadas.clear();
+        transformadosServicio.clear();
+        modeloTabla1.setRowCount(0); 
+        modeloTabla2.setRowCount(0);
     }
 
     // --- Helpers UI (Estilos) ---
     private void estilizarCard(JPanel p) {
         p.setBackground(COLOR_CARD);
-        p.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(COLOR_BORDE,1),BorderFactory.createEmptyBorder(0,0,0,0)));
+        p.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(COLOR_BORDE, 1),
+            BorderFactory.createEmptyBorder(0,0,0,0))
+        );
     }
     private JLabel crearLabel(String t) {
         JLabel l = new JLabel(t); l.setFont(new Font("Inter",Font.BOLD,12));
         l.setForeground(COLOR_TEXTO_SECUNDARIO); l.setAlignmentX(Component.LEFT_ALIGNMENT); return l;
     }
     
-    // NOTA: Se eliminó el método crearInput porque ya no hay inputs manuales
-    
-    private void estilizarCombo(JComboBox<String> c) {
-        c.setFont(new Font("Inter",Font.PLAIN,14)); c.setBackground(COLOR_HOVER); c.setForeground(Color.WHITE);
-        c.setBorder(BorderFactory.createLineBorder(COLOR_BORDE)); c.setMaximumSize(new Dimension(Integer.MAX_VALUE,40)); c.setAlignmentX(Component.LEFT_ALIGNMENT);
-    }
     private JButton crearBoton(String t, Color c, boolean r) {
         JButton b = new JButton(t) {
             protected void paintComponent(Graphics g) {
@@ -322,36 +306,5 @@ public class TransformadasInversas extends JFrame {
         t.getTableHeader().setBorder(BorderFactory.createMatteBorder(0,0,1,0,COLOR_BORDE));
         DefaultTableCellRenderer r = new DefaultTableCellRenderer(); r.setHorizontalAlignment(JLabel.CENTER);
         for(int i=0;i<t.getColumnCount();i++) t.getColumnModel().getColumn(i).setCellRenderer(r);
-    }
-
-    // --- Panel Histograma ---
-    private class PanelGraficaHistograma extends JPanel {
-        private List<Double> d; private String tit; private int nInt;
-        public void setDatos(List<Double> datos, String t) {
-            this.d = datos; this.tit = t;
-            this.nInt = (int)Math.sqrt(datos.size()); if(nInt<5)nInt=5; if(nInt>50)nInt=50;
-            repaint();
-        }
-        public void limpiar() { this.d=null; repaint(); }
-        protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            if(d==null||d.isEmpty()) { g.setColor(COLOR_TEXTO_SECUNDARIO); g.drawString("Sin datos transformados", 20, 30); return; }
-            Graphics2D g2 = (Graphics2D)g; g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
-            int w=getWidth(), h=getHeight(), pad=40;
-            double min=Collections.min(d), max=Collections.max(d); if(min==max)max+=1;
-            int[] f = new int[nInt]; double anc=(max-min)/nInt; int maxF=0;
-            for(double v:d) { int i=(int)((v-min)/anc); if(i>=nInt)i=nInt-1; f[i]++; if(f[i]>maxF)maxF=f[i]; }
-            g2.setColor(COLOR_TEXTO_SECUNDARIO); g2.drawLine(pad,h-pad,w-pad,h-pad); g2.drawLine(pad,pad,pad,h-pad);
-            double bw=(double)(w-2*pad)/nInt;
-            for(int i=0;i<nInt;i++) {
-                double bh=((double)f[i]/maxF)*(h-2*pad);
-                int x=pad+(int)(i*bw), y=h-pad-(int)bh;
-                g2.setColor(COLOR_GRAFICA_BARRA); g2.fillRect(x,y,(int)bw-1,(int)bh);
-                g2.setColor(COLOR_GRAFICA_BARRA.darker()); g2.drawRect(x,y,(int)bw-1,(int)bh);
-            }
-            g2.setColor(COLOR_TEXTO); g2.setFont(new Font("Inter",Font.PLAIN,10));
-            g2.drawString(String.format("%.2f",min),pad,h-pad+15); g2.drawString(String.format("%.2f",max),w-pad-40,h-pad+15);
-            g2.setFont(new Font("Inter",Font.BOLD,12)); g2.drawString(tit!=null?tit:"Distribución",pad+10,pad-10);
-        }
     }
 }

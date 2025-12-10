@@ -36,7 +36,7 @@ public class Pseudoaleatorios extends JFrame {
     private JTextField txtC;
     private JTextField txtM;
     private JTextField txtSemilla;
-    private JTabbedPane tabbedPaneNumeros;
+    // private JTabbedPane tabbedPaneNumeros; // YA NO SE NECESITA
     private JTable tablaNumeros1;
     private JTable tablaNumeros2;
     private JScrollPane scrollPruebas;
@@ -172,12 +172,12 @@ public class Pseudoaleatorios extends JFrame {
         panel.add(crearCardParametros(), gbc);
         
         // Panel central: Números (35% del ancho)
-        gbc.weightx = 0.30;
+        gbc.weightx = 0.35; // Aumentado ligeramente
         gbc.gridx = 1;
         panel.add(crearCardNumeros(), gbc);
         
-        // Panel derecho: Resultados/Pruebas (55% del ancho - el más ancho)
-        gbc.weightx = 0.55;
+        // Panel derecho: Resultados/Pruebas (50% del ancho)
+        gbc.weightx = 0.50;
         gbc.insets = new Insets(0, 0, 0, 0); // Sin espacio al final
         gbc.gridx = 2;
         panel.add(crearCardResultados(), gbc);
@@ -205,24 +205,25 @@ public class Pseudoaleatorios extends JFrame {
         return card;
     }
     
+    // --- MÉTODO MODIFICADO PARA MOSTRAR TABLAS LADO A LADO ---
     private JPanel crearCardNumeros() {
         JPanel card = crearCard("Números Generados - 2 Conjuntos");
         card.setLayout(new BorderLayout(0, 15));
         
-        // Crear un tabbed pane para mostrar los 2 conjuntos
-        tabbedPaneNumeros = new JTabbedPane();
-        tabbedPaneNumeros.setFont(new Font("Inter", Font.BOLD, 13));
-        tabbedPaneNumeros.setBackground(COLOR_CARD);
-        tabbedPaneNumeros.setForeground(COLOR_NEGRO);
+        // Usamos GridLayout para poner las tablas una al lado de la otra
+        // 1 fila, 2 columnas, separación horizontal de 10px
+        JPanel panelContenedorTablas = new JPanel(new GridLayout(1, 2, 10, 0));
+        panelContenedorTablas.setBackground(COLOR_CARD);
         
         // Panel para conjunto 1
         JPanel panelConjunto1 = new JPanel(new BorderLayout());
-        panelConjunto1.setBackground(COLOR_NEGRO);
+        panelConjunto1.setBackground(COLOR_CARD);
         
         JLabel lblConjunto1 = new JLabel("Conjunto 1 (Entradas)");
         lblConjunto1.setFont(new Font("Inter", Font.BOLD, 12));
         lblConjunto1.setForeground(COLOR_TEXTO);
         lblConjunto1.setBorder(BorderFactory.createEmptyBorder(0, 0, 5, 0));
+        lblConjunto1.setHorizontalAlignment(SwingConstants.CENTER);
         
         tablaNumeros1 = crearTablaNumeros();
         JScrollPane scroll1 = new JScrollPane(tablaNumeros1);
@@ -241,6 +242,7 @@ public class Pseudoaleatorios extends JFrame {
         lblConjunto2.setFont(new Font("Inter", Font.BOLD, 12));
         lblConjunto2.setForeground(COLOR_TEXTO);
         lblConjunto2.setBorder(BorderFactory.createEmptyBorder(0, 0, 5, 0));
+        lblConjunto2.setHorizontalAlignment(SwingConstants.CENTER);
         
         tablaNumeros2 = crearTablaNumeros();
         JScrollPane scroll2 = new JScrollPane(tablaNumeros2);
@@ -251,10 +253,11 @@ public class Pseudoaleatorios extends JFrame {
         panelConjunto2.add(lblConjunto2, BorderLayout.NORTH);
         panelConjunto2.add(scroll2, BorderLayout.CENTER);
         
-        tabbedPaneNumeros.addTab("Conjunto 1", panelConjunto1);
-        tabbedPaneNumeros.addTab("Conjunto 2", panelConjunto2);
+        // Añadir ambos paneles al grid
+        panelContenedorTablas.add(panelConjunto1);
+        panelContenedorTablas.add(panelConjunto2);
         
-        card.add(tabbedPaneNumeros, BorderLayout.CENTER);
+        card.add(panelContenedorTablas, BorderLayout.CENTER);
         
         return card;
     }
@@ -268,8 +271,8 @@ public class Pseudoaleatorios extends JFrame {
         
         JTable tabla = new JTable(modelo);
         estilizarTabla(tabla);
-        tabla.getColumnModel().getColumn(0).setPreferredWidth(60);
-        tabla.getColumnModel().getColumn(0).setMaxWidth(80);
+        tabla.getColumnModel().getColumn(0).setPreferredWidth(40);
+        tabla.getColumnModel().getColumn(0).setMaxWidth(60);
         
         return tabla;
     }
@@ -294,7 +297,7 @@ public class Pseudoaleatorios extends JFrame {
         panelInfoConfianza.add(lblInfoConfianza);
         panelInfoConfianza.add(lblValorConfianza);
         
-        // Panel de pruebas - COMO ESTABA ORIGINALMENTE
+        // Panel de pruebas
         panelPruebas = new JPanel();
         panelPruebas.setLayout(new BoxLayout(panelPruebas, BoxLayout.Y_AXIS));
         panelPruebas.setBackground(COLOR_CARD);
@@ -365,7 +368,7 @@ public class Pseudoaleatorios extends JFrame {
         
         
         if (cbMetodo.getSelectedIndex() == 0) {
-            // Congruencial Mixto (CON PARÁMETROS QUE FUNCIONAN CON TU MÉTODO)
+            // Congruencial Mixto
             txtX0.setText("7");
             txtA.setText("5");
             txtC.setText("3");
@@ -379,7 +382,7 @@ public class Pseudoaleatorios extends JFrame {
             // Ocultar campo semilla del método de cuadrados medios
             txtSemilla.setVisible(false);
         } else {
-            // Cuadrados Medios (CON PARÁMETROS QUE FUNCIONAN CON TU MÉTODO)
+            // Cuadrados Medios
             txtSemilla.setText("12345");
             agregarCampoExistente(txtSemilla, "Semilla Base", 
                 "Número de al menos 3 dígitos (cada conjunto tendrá semilla diferente)");
@@ -514,13 +517,12 @@ public class Pseudoaleatorios extends JFrame {
             }
             
             if (cbMetodo.getSelectedIndex() == 0) {
-                // Congruencial Mixto - TU MÉTODO
+                // Congruencial Mixto
                 int x0 = Integer.parseInt(txtX0.getText());
                 int a = Integer.parseInt(txtA.getText());
                 int c = Integer.parseInt(txtC.getText());
                 int m = Integer.parseInt(txtM.getText());
                 
-                // Validación básica para tu método
                 if (x0 < 0 || x0 >= m) {
                     mostrarError("X₀ debe estar en el rango [0, m-1]");
                     return;
@@ -538,7 +540,6 @@ public class Pseudoaleatorios extends JFrame {
                     return;
                 }
                 
-                // Usar la validación original o una simplificada
                 String validacion = validarParametrosMixtoSencillo(m, a, c, x0);
                 if (!validacion.equals("OK")) {
                     mostrarError("Parámetros inválidos:\n" + validacion);
@@ -549,10 +550,9 @@ public class Pseudoaleatorios extends JFrame {
                 numerosGenerados = GeneradorPseudoaleatorios.generarCongruencialMixto(n, x0, a, c, m, 2);
                 
             } else {
-                // Cuadrados Medios - TU MÉTODO
+                // Cuadrados Medios
                 int semilla = Integer.parseInt(txtSemilla.getText());
                 
-                // Validación básica para tu método
                 if (semilla <= 0) {
                     mostrarError("La semilla debe ser > 0");
                     return;
@@ -564,7 +564,6 @@ public class Pseudoaleatorios extends JFrame {
                     return;
                 }
                 
-                // Verificar desbordamiento
                 long cuadrado = (long) semilla * (long) semilla;
                 if (cuadrado < 0) {
                     mostrarError("Semilla demasiado grande, puede causar desbordamiento");
@@ -575,7 +574,7 @@ public class Pseudoaleatorios extends JFrame {
                 numerosGenerados = GeneradorPseudoaleatorios.generarCuadradosMedios(n, semilla, 2);
             }
             
-            // --- MODIFICACIÓN: GUARDAR EN SINGLETON ---
+            // --- GUARDAR EN SINGLETON ---
             if (numerosGenerados != null) {
                 SimulacionDatos.getInstancia().setDatosGenerados(
                     numerosGenerados[0],
@@ -606,11 +605,7 @@ public class Pseudoaleatorios extends JFrame {
         }
     }
     
-    /**
-     * Validación simplificada para tu método congruencial
-     */
     private String validarParametrosMixtoSencillo(int m, int a, int c, int x0) {
-        // Validaciones básicas
         if (m <= 0) return "m debe ser > 0";
         if (a <= 0) return "a debe ser > 0";
         if (c < 0) return "c debe ser ≥ 0";
@@ -618,9 +613,6 @@ public class Pseudoaleatorios extends JFrame {
         if (x0 >= m) return "X₀ debe ser < m";
         if (c >= m) return "c debe ser < m";
         if (a >= m) return "a debe ser < m";
-        
-        // Para tu método, podemos usar validaciones más tolerantes
-        // Solo verificar que sean números válidos
         return "OK";
     }
     
@@ -641,13 +633,9 @@ public class Pseudoaleatorios extends JFrame {
             return;
         }
         
-        // Obtener nivel de confianza seleccionado
         nivelConfianza = obtenerNivelConfianzaSeleccionado();
-        
-        // Actualizar información de nivel de confianza
         actualizarInfoConfianza();
         
-        // Ejecutar pruebas y almacenar resultados
         if (conjunto == 0) {
             resultadosPruebasConjunto1[0] = EstadisticasCalculador.pruebaMedia(numerosGenerados[conjunto], nivelConfianza);
             resultadosPruebasConjunto1[1] = EstadisticasCalculador.pruebaVarianza(numerosGenerados[conjunto], nivelConfianza);
@@ -664,36 +652,15 @@ public class Pseudoaleatorios extends JFrame {
             resultadosPruebasConjunto2[5] = EstadisticasCalculador.pruebaPoker(numerosGenerados[conjunto], nivelConfianza);
         }
         
-        // Mostrar pruebas del conjunto seleccionado
         mostrarPruebasConjunto(conjunto);
-        
         mostrarExito("Pruebas ejecutadas correctamente para el Conjunto " + (conjunto + 1) + 
                      " con nivel de confianza " + String.format("%.1f%%", nivelConfianza * 100));
-    }
-    
-    private void ejecutarPruebasAmbos() {
-        if (numerosGenerados == null || numerosGenerados[0] == null || numerosGenerados[0].isEmpty() ||
-            numerosGenerados[1] == null || numerosGenerados[1].isEmpty()) {
-            mostrarError("Primero debes generar números para ambos conjuntos");
-            return;
-        }
-        
-        // Obtener nivel de confianza seleccionado
-        nivelConfianza = obtenerNivelConfianzaSeleccionado();
-        
-        // Ejecutar pruebas para ambos conjuntos
-        ejecutarPruebas(0);
-        ejecutarPruebas(1);
-        
-        mostrarExito("Pruebas ejecutadas correctamente para AMBOS conjuntos con nivel de confianza " + 
-                     String.format("%.1f%%", nivelConfianza * 100));
     }
     
     private void mostrarPruebasConjunto(int conjunto) {
         panelPruebas.removeAll();
         panelPruebas.add(Box.createRigidArea(new Dimension(0, 10)));
         
-        // Obtener resultados del conjunto seleccionado
         EstadisticasCalculador.ResultadoPrueba[] resultados;
         Color colorConjunto;
         
@@ -705,7 +672,6 @@ public class Pseudoaleatorios extends JFrame {
             colorConjunto = COLOR_CONJUNTO2;
         }
         
-        // Verificar si hay resultados
         if (resultados == null || resultados[0] == null) {
             JLabel lblNoPruebas = new JLabel("No hay pruebas ejecutadas para este conjunto");
             lblNoPruebas.setFont(new Font("Inter", Font.BOLD, 14));
@@ -713,7 +679,6 @@ public class Pseudoaleatorios extends JFrame {
             lblNoPruebas.setHorizontalAlignment(SwingConstants.CENTER);
             panelPruebas.add(lblNoPruebas);
         } else {
-            // Agregar cada prueba - EXACTAMENTE COMO ESTABA ORIGINALMENTE
             String[] nombresPruebas = {"Media", "Varianza", "Uniformidad (Chi-Cuadrado)", 
                                       "Corridas (Independencia)", "Series", "Poker"};
             
@@ -727,8 +692,6 @@ public class Pseudoaleatorios extends JFrame {
         panelPruebas.add(Box.createRigidArea(new Dimension(0, 10)));
         panelPruebas.revalidate();
         panelPruebas.repaint();
-        
-        // Asegurar que el scroll esté visible
         scrollPruebas.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
     }
     
@@ -739,11 +702,10 @@ public class Pseudoaleatorios extends JFrame {
         if (seleccionado.contains("90%")) return 0.90;
         if (seleccionado.contains("85%")) return 0.85;
         if (seleccionado.contains("80%")) return 0.80;
-        return 0.95; // Valor por defecto
+        return 0.95; 
     }
     
     private void actualizarInfoConfianza() {
-        // Buscar y actualizar el label en el panel de resultados
         Component[] componentes = panelPruebas.getParent().getParent().getParent().getComponents();
         for (Component comp : componentes) {
             if (comp instanceof JPanel) {
@@ -752,7 +714,6 @@ public class Pseudoaleatorios extends JFrame {
                     if (hijo instanceof JLabel) {
                         JLabel label = (JLabel) hijo;
                         if (label.getText() != null && label.getText().contains("Nivel de Confianza Actual")) {
-                            // Encontrar y actualizar el label del valor
                             JPanel parentPanel = (JPanel) hijo.getParent();
                             for (Component hermano : parentPanel.getComponents()) {
                                 if (hermano instanceof JLabel && hermano != hijo) {
@@ -777,11 +738,9 @@ public class Pseudoaleatorios extends JFrame {
         ));
         panelPrueba.setMaximumSize(new Dimension(Integer.MAX_VALUE, 300));
         
-        // Panel izquierdo: Detalles de la prueba
         JPanel panelIzquierdo = new JPanel(new BorderLayout(12, 12));
         panelIzquierdo.setBackground(COLOR_HOVER);
         
-        // Encabezado con resultado
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(COLOR_HOVER);
         
@@ -810,7 +769,6 @@ public class Pseudoaleatorios extends JFrame {
         header.add(lblResultado, BorderLayout.CENTER);
         header.add(panelDerecha, BorderLayout.EAST);
         
-        // Detalles de la prueba
         JPanel detalles = new JPanel();
         detalles.setLayout(new BoxLayout(detalles, BoxLayout.Y_AXIS));
         detalles.setBackground(COLOR_HOVER);
@@ -844,7 +802,6 @@ public class Pseudoaleatorios extends JFrame {
         panelIzquierdo.add(header, BorderLayout.NORTH);
         panelIzquierdo.add(detalles, BorderLayout.CENTER);
         
-        // Panel derecho: Gráfica de distribución normal
         JPanel panelGrafica = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -871,28 +828,23 @@ public class Pseudoaleatorios extends JFrame {
         int height = 180;
         int margin = 20;
         
-        // Área de dibujo
         int graphWidth = width - 2 * margin;
         int graphHeight = height - 2 * margin;
         
-        // Calcular valores críticos según el nivel de confianza
         double alpha = 1 - resultado.nivelConfianza;
         double alphaMitad = alpha / 2;
         
-        // Para pruebas Z (Media, Varianza, Corridas)
         double zCritico = 0;
         double estadisticoZ = 0;
         
         if (resultado.datosAdicionales != null && resultado.datosAdicionales.length >= 4) {
-            zCritico = resultado.datosAdicionales[3]; // Valor Z crítico
-            estadisticoZ = Math.abs(resultado.estadistico); // Estadístico Z absoluto
+            zCritico = resultado.datosAdicionales[3]; 
+            estadisticoZ = Math.abs(resultado.estadistico); 
         }
         
-        // Dibujar eje X
         g2.setColor(COLOR_TEXTO_SECUNDARIO);
         g2.drawLine(margin, height - margin, width - margin, height - margin);
         
-        // Marcar puntos en el eje X
         double[] puntosX = {-3, -2, -1, 0, 1, 2, 3};
         for (double punto : puntosX) {
             int x = margin + (int)((punto + 3) * graphWidth / 6);
@@ -903,7 +855,6 @@ public class Pseudoaleatorios extends JFrame {
             g2.drawString(label, x - labelWidth/2, height - margin + 15);
         }
         
-        // Dibujar curva de distribución normal
         g2.setColor(colorConjunto);
         g2.setStroke(new BasicStroke(2));
         
@@ -924,70 +875,55 @@ public class Pseudoaleatorios extends JFrame {
         }
         g2.draw(curva);
         
-        // Dibujar áreas de aceptación y rechazo
         if (zCritico > 0) {
-            // Calcular posiciones de los límites críticos
             int xLimiteInferior = margin + (int)((-zCritico + 3) * graphWidth / 6);
             int xLimiteSuperior = margin + (int)((zCritico + 3) * graphWidth / 6);
             
-            // Área de aceptación (central)
             Color colorAceptacion = new Color(colorConjunto.getRed(), colorConjunto.getGreen(), colorConjunto.getBlue(), 50);
             g2.setColor(colorAceptacion);
             g2.fillRect(xLimiteInferior, margin, xLimiteSuperior - xLimiteInferior, graphHeight);
             
-            // Áreas de rechazo (colas)
             Color colorRechazo = new Color(COLOR_ERROR.getRed(), COLOR_ERROR.getGreen(), COLOR_ERROR.getBlue(), 50);
             g2.setColor(colorRechazo);
             g2.fillRect(margin, margin, xLimiteInferior - margin, graphHeight);
             g2.fillRect(xLimiteSuperior, margin, width - margin - xLimiteSuperior, graphHeight);
             
-            // Líneas de límites críticos
             g2.setColor(Color.WHITE);
             g2.setStroke(new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{3}, 0));
             g2.drawLine(xLimiteInferior, margin, xLimiteInferior, height - margin);
             g2.drawLine(xLimiteSuperior, margin, xLimiteSuperior, height - margin);
             
-            // Etiquetas de porcentajes
             g2.setFont(new Font("Inter", Font.BOLD, 10));
             g2.setColor(COLOR_TEXTO);
             
-            // Área de aceptación (centro)
             String aceptacion = String.format("%.1f%%", resultado.nivelConfianza * 100);
             int aceptacionWidth = g2.getFontMetrics().stringWidth(aceptacion);
             int aceptacionX = xLimiteInferior + (xLimiteSuperior - xLimiteInferior) / 2 - aceptacionWidth/2;
             g2.drawString(aceptacion, aceptacionX, height - margin - 30);
             
-            // Áreas de rechazo (colas)
             String rechazo = String.format("%.1f%%", alphaMitad * 100);
             int rechazoWidth = g2.getFontMetrics().stringWidth(rechazo);
             
-            // Cola izquierda
             g2.drawString(rechazo, margin + 5, height - margin - 30);
-            
-            // Cola derecha
             g2.drawString(rechazo, width - margin - rechazoWidth - 5, height - margin - 30);
             
-            // Dibujar línea del estadístico Z si existe
             if (estadisticoZ > 0) {
                 int xEstadistico = margin + (int)((estadisticoZ + 3) * graphWidth / 6);
                 g2.setColor(COLOR_LINEA);
                 g2.setStroke(new BasicStroke(2));
                 g2.drawLine(xEstadistico, margin, xEstadistico, height - margin);
                 
-                // Indicador del valor del estadístico
                 g2.setFont(new Font("Inter", Font.BOLD, 9));
                 String estadisticoStr = String.format("Z=%.2f", resultado.estadistico);
                 int estadisticoWidth = g2.getFontMetrics().stringWidth(estadisticoStr);
                 g2.drawString(estadisticoStr, xEstadistico - estadisticoWidth/2, margin + 15);
                 
-                // Punto en la curva
                 double yCurva = funcionDensidadNormal(estadisticoZ);
                 int pyCurva = height - margin - (int)(yCurva * graphHeight * 1.5);
                 g2.fillOval(xEstadistico - 3, pyCurva - 3, 6, 6);
             }
         }
         
-        // Título de la gráfica
         g2.setFont(new Font("Inter", Font.BOLD, 11));
         g2.setColor(colorConjunto);
         String titulo = "Distribución Normal - Nivel de Confianza";
@@ -996,7 +932,6 @@ public class Pseudoaleatorios extends JFrame {
     }
     
     private double funcionDensidadNormal(double x) {
-        // Función de densidad de probabilidad normal estándar
         return (1.0 / Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * x * x);
     }
     
@@ -1020,25 +955,21 @@ public class Pseudoaleatorios extends JFrame {
     }
     
     private void limpiar() {
-        // Limpiar tablas
         DefaultTableModel modelo1 = (DefaultTableModel) tablaNumeros1.getModel();
         modelo1.setRowCount(0);
         
         DefaultTableModel modelo2 = (DefaultTableModel) tablaNumeros2.getModel();
         modelo2.setRowCount(0);
         
-        // Limpiar panel de pruebas
         panelPruebas.removeAll();
         panelPruebas.revalidate();
         panelPruebas.repaint();
         
-        // Limpiar resultados
         for (int i = 0; i < resultadosPruebasConjunto1.length; i++) {
             resultadosPruebasConjunto1[i] = null;
             resultadosPruebasConjunto2[i] = null;
         }
         
-        // Limpiar números generados
         numerosGenerados[0] = new ArrayList<>();
         numerosGenerados[1] = new ArrayList<>();
     }
